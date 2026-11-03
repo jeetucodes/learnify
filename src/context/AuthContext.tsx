@@ -54,16 +54,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
 
-      // Local guest session fallback
-      const saved = localStorage.getItem('learnify_active_session');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        const profile = await getProfile(parsed.id);
-        setUser({
-          ...parsed,
-          xp: profile?.xp ?? parsed.xp ?? 0,
-          streak: profile?.streak ?? parsed.streak ?? 1,
-        });
+      // Local guest session fallback only if Supabase is NOT configured
+      if (!isSupabaseConfigured()) {
+        const saved = localStorage.getItem('learnify_active_session');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          const profile = await getProfile(parsed.id);
+          setUser({
+            ...parsed,
+            xp: profile?.xp ?? parsed.xp ?? 0,
+            streak: profile?.streak ?? parsed.streak ?? 1,
+          });
+        }
       }
     } catch (err) {
       console.error('Error loading session:', err);
@@ -105,40 +107,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signInWithEmail = async (email: string, pass: string) => {
     setLoading(true);
     try {
-      if (isSupabaseConfigured()) {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
-        if (error) throw error;
-        if (data.user) {
-          const profile = await getProfile(data.user.id);
-          const activeUser: UserSession = {
-            id: data.user.id,
-            email: data.user.email || email,
-            name: profile?.name || 'Student',
-            avatar_url: profile?.avatar_url,
-            xp: profile?.xp ?? 0,
-            streak: profile?.streak ?? 1,
-            last_active: profile?.last_active || new Date().toISOString(),
-          };
-          setUser(activeUser);
-          localStorage.setItem('learnify_active_session', JSON.stringify(activeUser));
-        }
-      } else {
-        // Local simulation
-        const fakeId = 'usr_' + Math.abs(email.split('').reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0)).toString(16);
-        let profile = await getProfile(fakeId);
-        if (!profile) {
-          profile = {
-            id: fakeId,
-            name: email.split('@')[0],
-            xp: 0,
-            streak: 1,
-            last_active: new Date().toISOString(),
-          };
-          await saveProfile(profile);
-        }
+      if (!isSupabaseConfigured()) {
+        throw new Error('Supabase is not configured. Please check environment variables.');
+      }
+
+      const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password: pass });
+      if (error) throw error;
+
+      if (data.user) {
+        const profile = await getProfile(data.user.id);
         const activeUser: UserSession = {
-          ...profile,
-          email,
+          id: data.user.id,
+          email: data.user.email || email,
+          name: profile?.name || data.user.user_metadata?.full_name || email.split('@')[0],
+          avatar_url: profile?.avatar_url,
+          xp: profile?.xp ?? 0,
+          streak: profile?.streak ?? 1,
+          college: profile?.college,
+          specialization: profile?.specialization || 'DBMS Specialization',
+          bio: profile?.bio,
+          last_active: profile?.last_active || new Date().toISOString(),
         };
         setUser(activeUser);
         localStorage.setItem('learnify_active_session', JSON.stringify(activeUser));
@@ -151,42 +139,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signUpWithEmail = async (email: string, pass: string, name: string) => {
     setLoading(true);
     try {
-      if (isSupabaseConfigured()) {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password: pass,
-          options: { data: { full_name: name } },
-        });
-        if (error) throw error;
-        if (data.user) {
-          const profile: Profile = {
-            id: data.user.id,
-            name,
-            xp: 0,
-            streak: 1,
-            last_active: new Date().toISOString(),
-          };
-          await saveProfile(profile);
-          const activeUser: UserSession = {
-            ...profile,
-            email: data.user.email || email,
-          };
-          setUser(activeUser);
-          localStorage.setItem('learnify_active_session', JSON.stringify(activeUser));
-        }
-      } else {
-        const fakeId = 'usr_' + Math.abs(email.split('').reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0)).toString(16);
+      if (!isSupabaseConfigured()) {
+        throw new Error('Supabase is not configured. Please check environment variables.');
+      }
+
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password: pass,
+        options: { data: { full_name: name.trim() } },
+      });
+      if (error) throw error;
+
+      if (data.user) {
         const profile: Profile = {
-          id: fakeId,
-          name: name || email.split('@')[0],
+          id: data.user.id,
+          name: name.trim(),
           xp: 0,
           streak: 1,
           last_active: new Date().toISOString(),
         };
-        await saveProfile(profile);
+        try {
+          await saveProfile(profile);
+        } catch (e) {
+          console.warn('Profile sync:', e);
+        }
+
         const activeUser: UserSession = {
           ...profile,
-          email,
+          email: data.user.email || email,
         };
         setUser(activeUser);
         localStorage.setItem('learnify_active_session', JSON.stringify(activeUser));
@@ -197,33 +177,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signInWithGoogle = async () => {
-    if (isSupabaseConfigured()) {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: window.location.origin,
-        },
-      });
-      if (error) throw error;
-    } else {
-      // Mock Google sign in
-      const fakeId = 'usr_google_' + Math.floor(Math.random() * 10000);
-      const profile: Profile = {
-        id: fakeId,
-        name: 'Alex Johnson',
-        avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
-        xp: 120,
-        streak: 3,
-        last_active: new Date().toISOString(),
-      };
-      await saveProfile(profile);
-      const activeUser: UserSession = {
-        ...profile,
-        email: 'alex.johnson@gmail.com',
-      };
-      setUser(activeUser);
-      localStorage.setItem('learnify_active_session', JSON.stringify(activeUser));
+    if (!isSupabaseConfigured()) {
+      throw new Error('Supabase is not configured for OAuth authentication.');
     }
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin,
+      },
+    });
+    if (error) throw error;
   };
 
   const guestLogin = async (customName?: string) => {
@@ -234,8 +197,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const profile: Profile = {
         id: guestId,
         name,
-        xp: 40,
-        streak: 2,
+        xp: 0,
+        streak: 1,
         last_active: new Date().toISOString(),
       };
       await saveProfile(profile);

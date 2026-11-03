@@ -8,6 +8,9 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     avatar_url TEXT,
     xp INTEGER NOT NULL DEFAULT 0,
     streak INTEGER NOT NULL DEFAULT 0,
+    college TEXT,
+    specialization TEXT DEFAULT 'DBMS Specialization',
+    bio TEXT,
     last_active TIMESTAMPTZ DEFAULT now(),
     created_at TIMESTAMPTZ DEFAULT now()
 );
@@ -106,10 +109,10 @@ CREATE POLICY "Public profiles are viewable by everyone" ON public.profiles
     FOR SELECT USING (true);
 
 CREATE POLICY "Users can insert their own profile" ON public.profiles
-    FOR INSERT WITH CHECK (auth.uid() = id);
+    FOR INSERT TO authenticated WITH CHECK ((select auth.uid()) = id);
 
 CREATE POLICY "Users can update their own profile" ON public.profiles
-    FOR UPDATE USING (auth.uid() = id);
+    FOR UPDATE TO authenticated USING ((select auth.uid()) = id) WITH CHECK ((select auth.uid()) = id);
 
 -- Syllabus & Questions: Everyone can read
 CREATE POLICY "Everyone can read subjects" ON public.subjects
@@ -126,40 +129,55 @@ CREATE POLICY "Everyone can read questions" ON public.questions
 
 -- Allow authenticated users to insert questions (Notes-to-Quiz / AI generated)
 CREATE POLICY "Users can insert questions" ON public.questions
-    FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+    FOR INSERT TO authenticated WITH CHECK (true);
 
 -- Allow reporting wrong questions (flagged = true)
 CREATE POLICY "Users can flag questions" ON public.questions
-    FOR UPDATE USING (true) WITH CHECK (true);
+    FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
 
 -- Attempts: Users see only their own attempts
 CREATE POLICY "Users can view own attempts" ON public.attempts
-    FOR SELECT USING (auth.uid() = user_id);
+    FOR SELECT TO authenticated USING ((select auth.uid()) = user_id);
 
 CREATE POLICY "Users can insert own attempts" ON public.attempts
-    FOR INSERT WITH CHECK (auth.uid() = user_id);
+    FOR INSERT TO authenticated WITH CHECK ((select auth.uid()) = user_id);
 
 -- Battle Rooms & Participants:
 CREATE POLICY "Battle rooms viewable by authenticated users" ON public.battle_rooms
-    FOR SELECT USING (auth.role() = 'authenticated');
+    FOR SELECT TO authenticated USING (true);
 
 CREATE POLICY "Host can insert/update battle room" ON public.battle_rooms
-    FOR ALL USING (auth.uid() = host_id);
+    FOR ALL TO authenticated USING ((select auth.uid()) = host_id) WITH CHECK ((select auth.uid()) = host_id);
 
 CREATE POLICY "Battle participants viewable by room participants" ON public.battle_participants
-    FOR SELECT USING (auth.role() = 'authenticated');
+    FOR SELECT TO authenticated USING (true);
 
 CREATE POLICY "Users can join battle rooms" ON public.battle_participants
-    FOR INSERT WITH CHECK (auth.uid() = user_id);
+    FOR INSERT TO authenticated WITH CHECK ((select auth.uid()) = user_id);
 
 CREATE POLICY "Users can update their own battle participation" ON public.battle_participants
-    FOR UPDATE USING (auth.uid() = user_id);
+    FOR UPDATE TO authenticated USING ((select auth.uid()) = user_id) WITH CHECK ((select auth.uid()) = user_id);
+
+-- Grant appropriate permissions to anon and authenticated roles
+GRANT USAGE ON SCHEMA public TO anon, authenticated;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated;
+GRANT ALL ON ALL ROUTINES IN SCHEMA public TO anon, authenticated;
 
 -- ==========================================
 -- REALTIME REPLICATION
 -- ==========================================
-ALTER PUBLICATION supabase_realtime ADD TABLE public.battle_rooms;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.battle_participants;
+DO $$
+BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.battle_rooms;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.battle_participants;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
 
 -- ==========================================
 -- SERVER-SIDE FUNCTIONS (Stored Procedures)
@@ -181,7 +199,7 @@ BEGIN
     ON CONFLICT (id) DO NOTHING;
     RETURN new;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- Trigger on auth.users
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;

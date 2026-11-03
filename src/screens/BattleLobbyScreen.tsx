@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Copy,
   Check,
@@ -36,6 +36,11 @@ export const BattleLobbyScreen: React.FC<BattleLobbyScreenProps> = ({ onStartGam
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const onStartGameRef = useRef(onStartGame);
+  useEffect(() => {
+    onStartGameRef.current = onStartGame;
+  });
+
   useEffect(() => {
     if (!room) return;
 
@@ -46,7 +51,7 @@ export const BattleLobbyScreen: React.FC<BattleLobbyScreenProps> = ({ onStartGam
         if (data.room) setRoom(data.room);
         if (data.participants) setParticipants(data.participants);
       } else if (data?.type === 'BATTLE_STARTED') {
-        onStartGame(data.room, data.participants || participants);
+        onStartGameRef.current(data.room, data.participants || participants);
       }
     };
 
@@ -73,7 +78,7 @@ export const BattleLobbyScreen: React.FC<BattleLobbyScreenProps> = ({ onStartGam
       channel.removeEventListener('message', handleMessage);
       clearInterval(interval);
     };
-  }, [room?.code, onStartGame]);
+  }, [room?.code]);
 
   const handleCreateRoom = async () => {
     if (!user) return;

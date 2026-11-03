@@ -228,6 +228,21 @@ export async function recordAttempt(
   attempts.push(newAttempt);
   setLocalItem(STORAGE_KEYS.ATTEMPTS, attempts);
 
+  if (isSupabaseConfigured()) {
+    try {
+      await supabase.from('attempts').insert({
+        id: newAttempt.id,
+        user_id: newAttempt.user_id,
+        question_id: newAttempt.question_id,
+        topic_id: newAttempt.topic_id,
+        correct: newAttempt.correct,
+        selected_index: newAttempt.selected_index,
+      });
+    } catch (e) {
+      // Ignore if table pending creation
+    }
+  }
+
   // Update profile
   const profile = (await getProfile(userId)) || {
     id: userId,

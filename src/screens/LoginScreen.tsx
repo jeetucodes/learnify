@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Mail, Lock, User, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { SugaryBook, SugarySparkles } from '../components/SugaryIcons';
+import { SugaryBook } from '../components/SugaryIcons';
 
 interface LoginScreenProps {
   onSuccess: () => void;
@@ -9,7 +9,7 @@ interface LoginScreenProps {
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess, onBackToLanding }) => {
-  const { signInWithEmail, signUpWithEmail, signInWithGoogle, guestLogin } = useAuth();
+  const { signInWithEmail, signUpWithEmail, signInWithGoogle } = useAuth();
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -44,16 +44,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess, onBackToLan
       onSuccess();
     } catch (err: any) {
       setError(err.message || 'Google sign-in encountered an issue.');
-    }
-  };
-
-  const handleGuest = async () => {
-    setError(null);
-    try {
-      await guestLogin();
-      onSuccess();
-    } catch (err: any) {
-      setError(err.message || 'Guest login failed.');
     }
   };
 
@@ -195,7 +185,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess, onBackToLan
             </span>
           </div>
 
-          {/* Google & Demo Guest Actions */}
+          {/* Google Authentication */}
           <div className="space-y-2.5">
             <button
               type="button"
@@ -221,15 +211,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess, onBackToLan
                 />
               </svg>
               <span>Continue with Google</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleGuest}
-              className="w-full py-2.5 text-xs font-bold text-indigo-600 hover:text-indigo-800 cursor-pointer flex items-center justify-center gap-1.5"
-            >
-              <SugarySparkles size={16} />
-              <span>Explore as Demo Student (Instant Access)</span>
             </button>
           </div>
 
