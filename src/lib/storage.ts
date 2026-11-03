@@ -40,7 +40,11 @@ export function safeUUID(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();
   }
-  return 'id_' + Math.random().toString(36).substring(2, 11) + '_' + Date.now();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
 }
 
 function getLocalItem<T>(key: string, defaultValue: T): T {
@@ -281,6 +285,21 @@ export async function recordAttempt(
   };
 }
 
+export async function awardBattleXP(userId: string, xpAmount: number): Promise<number> {
+  const profile = await getProfile(userId);
+  if (!profile) return xpAmount;
+
+  const newTotalXp = (profile.xp || 0) + xpAmount;
+  const updatedProfile: Profile = {
+    ...profile,
+    xp: newTotalXp,
+    last_active: new Date().toISOString(),
+  };
+
+  await saveProfile(updatedProfile);
+  return newTotalXp;
+}
+
 export async function getUserAttempts(userId: string): Promise<Attempt[]> {
   if (isSupabaseConfigured()) {
     try {
@@ -400,40 +419,8 @@ export async function saveGeneratedQuestions(
   return newQuestions;
 }
 
-// Client generator fallback if Edge Function is offline/unreachable
-export function generateFallbackQuestionsFromText(text: string): Question[] {
-  // Extract key sentences or themes from the text to make realistic MCQs
-  const lines = text.split(/[.\n]/).map((l) => l.trim()).filter((l) => l.length > 25);
-  const sampleTopics = lines.slice(0, 10);
-
-  const fallbackQuestions: Question[] = [];
-
-  for (let i = 0; i < 10; i++) {
-    const keySentence = sampleTopics[i % sampleTopics.length] || `Key concept #${i + 1} from your uploaded notes`;
-    const words = keySentence.split(' ').slice(0, 6).join(' ');
-
-    fallbackQuestions.push({
-      id: safeUUID(),
-      topic_id: null,
-      question: `Regarding "${words}...": What is the primary conceptual principle highlighted in your uploaded notes?`,
-      options: [
-        `Principle of direct application and structural consistency`,
-        `Alternative secondary constraint without state persistence`,
-        `Dynamic overhead reduction through cache segregation`,
-        `Asynchronous evaluation without validation checks`,
-      ],
-      answer_index: 0,
-      explanation: `As described in the notes: "${keySentence.slice(0, 120)}...", this principle is essential for maintaining accuracy and conceptual consistency.`,
-      source: 'ai',
-      flagged: false,
-    });
-  }
-
-  return fallbackQuestions;
-}
-
 // ----------------------------------------------------
-// 6. Live Battle System
+// 6. Live Battle System (Supabase Realtime + RPC)
 // ----------------------------------------------------
 export function generateRoomCode(): string {
   const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -455,28 +442,40 @@ export function getBattleChannel(roomCode: string): BroadcastChannel {
   return battleBroadcastChannels.get(roomCode)!;
 }
 
-export async function createBattleRoom(hostId: string, hostName: string): Promise<BattleRoom> {
+export async function createBattleRoom(
+  hostId: string,
+  hostName: string,
+  topicId?: string
+): Promise<BattleRoom> {
   const code = generateRoomCode();
-  const allQuestions = getLocalItem<Question[]>(STORAGE_KEYS.QUESTIONS, SEED_QUESTIONS);
-  // Pick 10 random questions
-  const selectedQuestions = allQuestions.sort(() => 0.5 - Math.random()).slice(0, 10);
+  const roomId = safeUUID();
+
+  // Pick 10 random questions from topic or syllabus
+  let selectedQuestions: Question[] = [];
+  if (topicId) {
+    selectedQuestions = await getQuestionsByTopic(topicId);
+  }
+  if (selectedQuestions.length === 0) {
+    const allQuestions = getLocalItem<Question[]>(STORAGE_KEYS.QUESTIONS, SEED_QUESTIONS);
+    selectedQuestions = allQuestions.sort(() => 0.5 - Math.random()).slice(0, 10);
+  } else {
+    selectedQuestions = selectedQuestions.sort(() => 0.5 - Math.random()).slice(0, 10);
+  }
+
   const questionIds = selectedQuestions.map((q) => q.id);
 
   const room: BattleRoom = {
-    id: safeUUID(),
+    id: roomId,
     code,
     host_id: hostId,
-    status: 'waiting',
+    topic_id: topicId || null,
+    status: 'lobby',
     question_ids: questionIds,
+    current_index: 0,
     current_question_index: 0,
     created_at: new Date().toISOString(),
   };
 
-  const rooms = getLocalItem<Record<string, BattleRoom>>(STORAGE_KEYS.BATTLE_ROOMS, {});
-  rooms[code] = room;
-  setLocalItem(STORAGE_KEYS.BATTLE_ROOMS, rooms);
-
-  // Add host as first participant
   const participant: BattleParticipant = {
     id: safeUUID(),
     room_id: room.id,
@@ -487,59 +486,117 @@ export async function createBattleRoom(hostId: string, hostName: string): Promis
     joined_at: new Date().toISOString(),
   };
 
+  // 1. Insert into Supabase if configured
+  if (isSupabaseConfigured()) {
+    try {
+      await supabase.from('battle_rooms').insert({
+        id: room.id,
+        code: room.code,
+        host_id: hostId,
+        topic_id: topicId || null,
+        status: 'lobby',
+        question_ids: questionIds,
+        current_index: 0,
+      });
+
+      await supabase.from('battle_players').insert({
+        room_id: room.id,
+        user_id: hostId,
+        display_name: hostName,
+        score: 0,
+      });
+    } catch (e) {
+      console.warn('Supabase createBattleRoom notice:', e);
+    }
+  }
+
+  // 2. Local cache fallback
+  const rooms = getLocalItem<Record<string, BattleRoom>>(STORAGE_KEYS.BATTLE_ROOMS, {});
+  rooms[code] = room;
+  rooms[room.id] = room;
+  setLocalItem(STORAGE_KEYS.BATTLE_ROOMS, rooms);
+
   const participants = getLocalItem<Record<string, BattleParticipant[]>>(STORAGE_KEYS.BATTLE_PARTICIPANTS, {});
   participants[code] = [participant];
+  participants[room.id] = [participant];
   setLocalItem(STORAGE_KEYS.BATTLE_PARTICIPANTS, participants);
 
-  // Broadcast event
   getBattleChannel(code).postMessage({ type: 'ROOM_UPDATED', room, participants: [participant] });
 
   return room;
 }
 
-export async function addBotToBattleRoom(code: string): Promise<BattleParticipant[]> {
-  const upperCode = code.toUpperCase();
-  const room = await getBattleRoom(upperCode);
-  if (!room) throw new Error('Room not found');
+export async function getBattleRoom(codeOrId: string): Promise<BattleRoom | null> {
+  const normalized = codeOrId.toUpperCase();
 
-  const botNames = ['Alex AI ⚡', 'Sophia AI 🎯', 'Neo Coder 🚀', 'DBMS Bot 🧠'];
-  const botName = botNames[Math.floor(Math.random() * botNames.length)];
-  const botId = 'bot_' + Math.random().toString(36).substring(2, 7);
+  if (isSupabaseConfigured()) {
+    try {
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(codeOrId);
+      const query = supabase.from('battle_rooms').select('*');
+      const { data, error } = isUuid
+        ? await query.eq('id', codeOrId).single()
+        : await query.eq('code', normalized).single();
 
-  const botParticipant: BattleParticipant = {
-    id: safeUUID(),
-    room_id: room.id,
-    user_id: botId,
-    name: botName,
-    score: 0,
-    answers: [],
-    joined_at: new Date().toISOString(),
-  };
+      if (!error && data) {
+        return {
+          id: data.id,
+          code: data.code,
+          host_id: data.host_id,
+          topic_id: data.topic_id,
+          status: data.status,
+          question_ids: Array.isArray(data.question_ids) ? data.question_ids : JSON.parse(data.question_ids || '[]'),
+          current_index: data.current_index ?? data.current_question_index ?? 0,
+          current_question_index: data.current_index ?? data.current_question_index ?? 0,
+          question_started_at: data.question_started_at,
+          started_at: data.started_at,
+          created_at: data.created_at,
+        };
+      }
+    } catch (e) {
+      console.warn('Supabase getBattleRoom fallback:', e);
+    }
+  }
 
-  const participants = await getBattleParticipants(upperCode);
-  const updated = [...participants.filter((p) => !p.user_id.startsWith('bot_')), botParticipant];
-
-  const allParticipants = getLocalItem<Record<string, BattleParticipant[]>>(STORAGE_KEYS.BATTLE_PARTICIPANTS, {});
-  allParticipants[upperCode] = updated;
-  setLocalItem(STORAGE_KEYS.BATTLE_PARTICIPANTS, allParticipants);
-
-  getBattleChannel(upperCode).postMessage({
-    type: 'ROOM_UPDATED',
-    room,
-    participants: updated,
-  });
-
-  return updated;
-}
-
-export async function getBattleRoom(code: string): Promise<BattleRoom | null> {
   const rooms = getLocalItem<Record<string, BattleRoom>>(STORAGE_KEYS.BATTLE_ROOMS, {});
-  return rooms[code.toUpperCase()] || null;
+  return rooms[normalized] || rooms[codeOrId] || null;
 }
 
-export async function getBattleParticipants(code: string): Promise<BattleParticipant[]> {
+export async function getBattleParticipants(codeOrId: string): Promise<BattleParticipant[]> {
+  const normalized = codeOrId.toUpperCase();
+
+  if (isSupabaseConfigured()) {
+    try {
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(codeOrId);
+      let targetRoomId = codeOrId;
+      if (!isUuid) {
+        const r = await getBattleRoom(codeOrId);
+        if (r) targetRoomId = r.id;
+      }
+
+      const { data, error } = await supabase
+        .from('battle_players')
+        .select('*')
+        .eq('room_id', targetRoomId)
+        .order('score', { ascending: false });
+
+      if (!error && data && data.length > 0) {
+        return data.map((p) => ({
+          id: p.user_id,
+          room_id: p.room_id,
+          user_id: p.user_id,
+          name: p.display_name,
+          score: p.score,
+          answers: [],
+          joined_at: p.joined_at,
+        }));
+      }
+    } catch (e) {
+      console.warn('Supabase getBattleParticipants fallback:', e);
+    }
+  }
+
   const participants = getLocalItem<Record<string, BattleParticipant[]>>(STORAGE_KEYS.BATTLE_PARTICIPANTS, {});
-  return participants[code.toUpperCase()] || [];
+  return participants[normalized] || participants[codeOrId] || [];
 }
 
 export async function joinBattleRoom(
@@ -550,16 +607,20 @@ export async function joinBattleRoom(
   const upperCode = code.toUpperCase();
   const room = await getBattleRoom(upperCode);
   if (!room) {
-    throw new Error('Room not found. Please check the match code.');
+    throw new Error('Room not found. Please verify the 5-character match code.');
   }
 
-  const participants = await getBattleParticipants(upperCode);
+  if (room.status !== 'lobby' && room.status !== 'waiting') {
+    throw new Error('Battle already in progress or completed.');
+  }
+
+  const participants = await getBattleParticipants(room.id);
   if (participants.length >= 4 && !participants.some((p) => p.user_id === userId)) {
-    throw new Error('Battle room is full (max 4 players).');
+    throw new Error('Battle room is full (maximum 4 players).');
   }
 
+  const existing = participants.find((p) => p.user_id === userId);
   let updatedParticipants = [...participants];
-  const existing = updatedParticipants.find((p) => p.user_id === userId);
 
   if (!existing) {
     const newParticipant: BattleParticipant = {
@@ -573,13 +634,27 @@ export async function joinBattleRoom(
     };
     updatedParticipants.push(newParticipant);
 
+    if (isSupabaseConfigured()) {
+      try {
+        await supabase.from('battle_players').upsert({
+          room_id: room.id,
+          user_id: userId,
+          display_name: userName,
+          score: 0,
+        });
+      } catch (e) {
+        console.warn('Supabase player join notice:', e);
+      }
+    }
+
     const allParticipants = getLocalItem<Record<string, BattleParticipant[]>>(STORAGE_KEYS.BATTLE_PARTICIPANTS, {});
     allParticipants[upperCode] = updatedParticipants;
+    allParticipants[room.id] = updatedParticipants;
     setLocalItem(STORAGE_KEYS.BATTLE_PARTICIPANTS, allParticipants);
   }
 
   getBattleChannel(upperCode).postMessage({
-    type: 'ROOM_UPDATED',
+    type: 'PLAYERS_UPDATED',
     room,
     participants: updatedParticipants,
   });
@@ -587,46 +662,49 @@ export async function joinBattleRoom(
   return { room, participants: updatedParticipants };
 }
 
-export async function startBattle(code: string, hostId: string): Promise<{ room: BattleRoom; participants: BattleParticipant[] }> {
+export async function startBattle(
+  code: string,
+  hostId: string
+): Promise<{ room: BattleRoom; participants: BattleParticipant[] }> {
   const upperCode = code.toUpperCase();
   const room = await getBattleRoom(upperCode);
   if (!room) throw new Error('Room not found');
-  if (room.host_id !== hostId) throw new Error('Only the host can start the battle');
+  if (room.host_id !== hostId) throw new Error('Only the room host can start the battle');
 
-  let participants = await getBattleParticipants(upperCode);
-  if (participants.length < 2) {
-    // Automatically add AI rival so duel can start immediately
-    const botNames = ['Alex AI ⚡', 'Sophia AI 🎯', 'Neo Coder 🚀', 'DBMS Bot 🧠'];
-    const botName = botNames[Math.floor(Math.random() * botNames.length)];
-    const botId = 'bot_' + Math.random().toString(36).substring(2, 7);
-    const botParticipant: BattleParticipant = {
-      id: safeUUID(),
-      room_id: room.id,
-      user_id: botId,
-      name: botName,
-      score: 0,
-      answers: [],
-      joined_at: new Date().toISOString(),
-    };
-    participants = [...participants, botParticipant];
-    const allParticipants = getLocalItem<Record<string, BattleParticipant[]>>(STORAGE_KEYS.BATTLE_PARTICIPANTS, {});
-    allParticipants[upperCode] = participants;
-    setLocalItem(STORAGE_KEYS.BATTLE_PARTICIPANTS, allParticipants);
-  }
+  const participants = await getBattleParticipants(room.id);
+  const nowIso = new Date().toISOString();
 
   const updatedRoom: BattleRoom = {
     ...room,
-    status: 'in_progress',
-    started_at: new Date().toISOString(),
+    status: 'live',
+    current_index: 0,
     current_question_index: 0,
+    question_started_at: nowIso,
+    started_at: nowIso,
   };
+
+  if (isSupabaseConfigured()) {
+    try {
+      await supabase
+        .from('battle_rooms')
+        .update({
+          status: 'live',
+          current_index: 0,
+          question_started_at: nowIso,
+        })
+        .eq('id', room.id);
+    } catch (e) {
+      console.warn('Supabase startBattle notice:', e);
+    }
+  }
 
   const rooms = getLocalItem<Record<string, BattleRoom>>(STORAGE_KEYS.BATTLE_ROOMS, {});
   rooms[upperCode] = updatedRoom;
+  rooms[room.id] = updatedRoom;
   setLocalItem(STORAGE_KEYS.BATTLE_ROOMS, rooms);
 
   getBattleChannel(upperCode).postMessage({
-    type: 'BATTLE_STARTED',
+    type: 'ROOM_UPDATED',
     room: updatedRoom,
     participants,
   });
@@ -634,45 +712,61 @@ export async function startBattle(code: string, hostId: string): Promise<{ room:
   return { room: updatedRoom, participants };
 }
 
-// Server-side scoring logic (run locally or via Supabase RPC)
 export async function submitBattleAnswer(
+  roomId: string,
   code: string,
   userId: string,
   questionIndex: number,
   selectedIndex: number,
-  secondsRemaining: number
-): Promise<{ correct: boolean; pointsAwarded: number; newScore: number }> {
+  secondsRemaining = 15
+): Promise<{ correct: boolean; answer_index: number; pointsAwarded: number; newScore: number }> {
   const upperCode = code.toUpperCase();
-  const room = await getBattleRoom(upperCode);
-  if (!room) throw new Error('Room not found');
 
+  // 1. Try Supabase RPC submit_answer (Server-authoritative correctness & speed bonus)
+  if (isSupabaseConfigured()) {
+    try {
+      const { data, error } = await supabase.rpc('submit_answer', {
+        p_room_id: roomId,
+        p_question_index: questionIndex,
+        p_selected_index: selectedIndex,
+      });
+
+      if (!error && data) {
+        getBattleChannel(upperCode).postMessage({
+          type: 'SCORE_UPDATED',
+          userId,
+          newScore: data.new_score,
+        });
+
+        return {
+          correct: data.correct,
+          answer_index: data.answer_index,
+          pointsAwarded: data.points_awarded,
+          newScore: data.new_score,
+        };
+      }
+    } catch (e) {
+      console.warn('Supabase submit_answer RPC fallback:', e);
+    }
+  }
+
+  // 2. Safe local evaluation
   const allQuestions = getLocalItem<Question[]>(STORAGE_KEYS.QUESTIONS, SEED_QUESTIONS);
-  const targetQId = room.question_ids[questionIndex];
+  const room = await getBattleRoom(upperCode);
+  const targetQId = room?.question_ids[questionIndex];
   const question = allQuestions.find((q) => q.id === targetQId);
 
-  const isCorrect = question ? question.answer_index === selectedIndex : false;
-  // Speed bonus: 100 points for correct + up to 50 speed points based on remaining time (out of 15s)
-  const points = isCorrect ? 100 + Math.round(Math.min(15, Math.max(0, secondsRemaining)) * 3.33) : 0;
+  const correctIdx = question?.answer_index ?? 0;
+  const isCorrect = correctIdx === selectedIndex;
+  const speedBonus = isCorrect ? Math.round(Math.min(15, Math.max(0, secondsRemaining)) * 3.33) : 0;
+  const points = isCorrect ? 100 + speedBonus : 0;
 
   const participants = await getBattleParticipants(upperCode);
   const updatedParticipants = participants.map((p) => {
     if (p.user_id === userId) {
-      const alreadyAnswered = p.answers.some((a) => a.question_index === questionIndex);
-      if (alreadyAnswered) return p;
-
-      const newAnswers = [
-        ...p.answers,
-        {
-          question_index: questionIndex,
-          selected_index: selectedIndex,
-          correct: isCorrect,
-          points,
-        },
-      ];
       return {
         ...p,
         score: p.score + points,
-        answers: newAnswers,
       };
     }
     return p;
@@ -680,21 +774,182 @@ export async function submitBattleAnswer(
 
   const allParticipants = getLocalItem<Record<string, BattleParticipant[]>>(STORAGE_KEYS.BATTLE_PARTICIPANTS, {});
   allParticipants[upperCode] = updatedParticipants;
+  allParticipants[roomId] = updatedParticipants;
   setLocalItem(STORAGE_KEYS.BATTLE_PARTICIPANTS, allParticipants);
 
-  const updatedMe = updatedParticipants.find((p) => p.user_id === userId);
+  const me = updatedParticipants.find((p) => p.user_id === userId);
 
-  // Broadcast updated leaderboard to all players in the room
   getBattleChannel(upperCode).postMessage({
     type: 'SCORE_UPDATED',
     participants: updatedParticipants,
     userId,
-    points,
+    newScore: me?.score || 0,
   });
 
   return {
     correct: isCorrect,
+    answer_index: correctIdx,
     pointsAwarded: points,
-    newScore: updatedMe?.score || 0,
+    newScore: me?.score || 0,
   };
 }
+
+export async function advanceBattleQuestion(
+  roomId: string,
+  code: string
+): Promise<{ currentIndex: number; status: string; totalQuestions: number }> {
+  const upperCode = code.toUpperCase();
+
+  if (isSupabaseConfigured()) {
+    try {
+      const { data, error } = await supabase.rpc('advance_question', {
+        p_room_id: roomId,
+      });
+
+      if (!error && data) {
+        getBattleChannel(upperCode).postMessage({
+          type: 'QUESTION_ADVANCED',
+          currentIndex: data.current_index,
+          status: data.status,
+        });
+
+        return {
+          currentIndex: data.current_index,
+          status: data.status,
+          totalQuestions: data.total_questions,
+        };
+      }
+    } catch (e) {
+      console.warn('Supabase advance_question RPC fallback:', e);
+    }
+  }
+
+  // Local advance fallback
+  const room = await getBattleRoom(upperCode);
+  if (!room) throw new Error('Room not found');
+
+  const nextIdx = (room.current_index ?? 0) + 1;
+  const total = room.question_ids.length;
+  const newStatus = nextIdx >= total ? 'finished' : 'live';
+
+  const updatedRoom: BattleRoom = {
+    ...room,
+    current_index: nextIdx,
+    current_question_index: nextIdx,
+    status: newStatus as any,
+    question_started_at: new Date().toISOString(),
+  };
+
+  const rooms = getLocalItem<Record<string, BattleRoom>>(STORAGE_KEYS.BATTLE_ROOMS, {});
+  rooms[upperCode] = updatedRoom;
+  rooms[roomId] = updatedRoom;
+  setLocalItem(STORAGE_KEYS.BATTLE_ROOMS, rooms);
+
+  getBattleChannel(upperCode).postMessage({
+    type: 'ROOM_UPDATED',
+    room: updatedRoom,
+  });
+
+  return {
+    currentIndex: nextIdx,
+    status: newStatus,
+    totalQuestions: total,
+  };
+}
+
+export async function getQuestionsForBattle(questionIds: string[]): Promise<Question[]> {
+  if (isSupabaseConfigured() && questionIds.length > 0) {
+    try {
+      const { data, error } = await supabase
+        .from('questions')
+        .select('*')
+        .in('id', questionIds);
+
+      if (!error && data && data.length > 0) {
+        // Return matching questions with answer_index HIDDEN (-1) for client security!
+        const found: Question[] = [];
+        for (const id of questionIds) {
+          const q = data.find((item: any) => item.id === id);
+          if (q) {
+            found.push({ ...q, answer_index: -1 } as Question);
+          }
+        }
+        return found;
+      }
+    } catch (e) {
+      console.warn('Supabase getQuestionsForBattle notice:', e);
+    }
+  }
+
+  const allQuestions = getLocalItem<Question[]>(STORAGE_KEYS.QUESTIONS, SEED_QUESTIONS);
+  const localFound: Question[] = [];
+  for (const id of questionIds) {
+    const q = allQuestions.find((item) => item.id === id);
+    if (q) {
+      localFound.push({ ...q, answer_index: -1 });
+    }
+  }
+  return localFound;
+}
+
+export function subscribeToBattle(
+  roomId: string,
+  code: string,
+  onRoomUpdate: (room: BattleRoom) => void,
+  onPlayersUpdate: (players: BattleParticipant[]) => void
+): () => void {
+  const upperCode = code.toUpperCase();
+  const bc = getBattleChannel(upperCode);
+
+  const handleBcMessage = (e: MessageEvent) => {
+    const data = e.data;
+    if (data?.type === 'ROOM_UPDATED' && data.room) {
+      onRoomUpdate(data.room);
+    }
+    if (data?.type === 'PLAYERS_UPDATED' && data.participants) {
+      onPlayersUpdate(data.participants);
+    }
+    if (data?.type === 'SCORE_UPDATED') {
+      getBattleParticipants(roomId).then(onPlayersUpdate);
+    }
+  };
+
+  bc.addEventListener('message', handleBcMessage);
+
+  let supabaseChannel: any = null;
+
+  if (isSupabaseConfigured()) {
+    try {
+      supabaseChannel = supabase
+        .channel(`battle_room_${roomId}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'battle_rooms', filter: `id=eq.${roomId}` },
+          (payload: any) => {
+            if (payload.new) {
+              onRoomUpdate(payload.new as BattleRoom);
+            }
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'battle_players', filter: `room_id=eq.${roomId}` },
+          async () => {
+            const freshPlayers = await getBattleParticipants(roomId);
+            onPlayersUpdate(freshPlayers);
+          }
+        )
+        .subscribe();
+    } catch (e) {
+      console.warn('Realtime subscription notice:', e);
+    }
+  }
+
+  return () => {
+    bc.removeEventListener('message', handleBcMessage);
+    if (supabaseChannel && isSupabaseConfigured()) {
+      supabase.removeChannel(supabaseChannel);
+    }
+  };
+}
+

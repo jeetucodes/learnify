@@ -11,17 +11,17 @@ import {
   joinBattleRoom,
   startBattle,
   getBattleParticipants,
-  getBattleChannel,
-  addBotToBattleRoom,
+  subscribeToBattle,
+  getAllTopics,
 } from '../lib/storage';
 import {
   SugarySwords,
   SugaryTrophy,
-  SugarySparkles,
   SugaryEnvelope,
   SugaryBolt,
+  SugarySparkles,
 } from '../components/SugaryIcons';
-import type { BattleRoom, BattleParticipant } from '../types/database';
+import type { BattleRoom, BattleParticipant, Topic } from '../types/database';
 
 interface BattleLobbyScreenProps {
   onStartGame: (room: BattleRoom, participants: BattleParticipant[]) => void;
@@ -35,6 +35,8 @@ export const BattleLobbyScreen: React.FC<BattleLobbyScreenProps> = ({ onStartGam
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [topics, setTopics] = useState<Topic[]>([]);
+  const [selectedTopicId, setSelectedTopicId] = useState<string>('');
 
   const onStartGameRef = useRef(onStartGame);
   useEffect(() => {
@@ -42,52 +44,48 @@ export const BattleLobbyScreen: React.FC<BattleLobbyScreenProps> = ({ onStartGam
   });
 
   useEffect(() => {
+    getAllTopics().then((res) => {
+      setTopics(res);
+      if (res.length > 0) setSelectedTopicId(res[0].id);
+    });
+  }, []);
+
+  useEffect(() => {
     if (!room) return;
 
-    const channel = getBattleChannel(room.code);
-    const handleMessage = (e: MessageEvent) => {
-      const data = e.data;
-      if (data?.type === 'ROOM_UPDATED') {
-        if (data.room) setRoom(data.room);
-        if (data.participants) setParticipants(data.participants);
-      } else if (data?.type === 'BATTLE_STARTED') {
-        onStartGameRef.current(data.room, data.participants || participants);
+    // Supabase Realtime + cross-tab subscription
+    const unsubscribe = subscribeToBattle(
+      room.id,
+      room.code,
+      (updatedRoom) => {
+        setRoom(updatedRoom);
+        if (updatedRoom.status === 'live') {
+          onStartGameRef.current(updatedRoom, participants);
+        }
+      },
+      (updatedPlayers) => {
+        setParticipants(updatedPlayers);
       }
-    };
+    );
 
-    channel.addEventListener('message', handleMessage);
-
-    // Initial fetch
-    getBattleParticipants(room.code).then((p) => {
+    // Initial fetch of players
+    getBattleParticipants(room.id).then((p) => {
       setParticipants(p);
     });
 
-    // Cross-tab polling interval so updates arrive even across windows
-    const interval = setInterval(() => {
-      getBattleParticipants(room.code).then((p) => {
-        setParticipants((current) => {
-          if (JSON.stringify(current) !== JSON.stringify(p)) {
-            return p;
-          }
-          return current;
-        });
-      });
-    }, 1200);
-
     return () => {
-      channel.removeEventListener('message', handleMessage);
-      clearInterval(interval);
+      unsubscribe();
     };
-  }, [room?.code]);
+  }, [room?.id, room?.code]);
 
   const handleCreateRoom = async () => {
     if (!user) return;
     setError(null);
     setLoading(true);
     try {
-      const newRoom = await createBattleRoom(user.id, user.name);
+      const newRoom = await createBattleRoom(user.id, user.name, selectedTopicId || undefined);
       setRoom(newRoom);
-      const parts = await getBattleParticipants(newRoom.code);
+      const parts = await getBattleParticipants(newRoom.id);
       setParticipants(parts);
     } catch (err: any) {
       console.error(err);
@@ -119,15 +117,19 @@ export const BattleLobbyScreen: React.FC<BattleLobbyScreenProps> = ({ onStartGam
     }
   };
 
-  const handleAddBot = async () => {
+  const handleAddBot = () => {
     if (!room) return;
-    setError(null);
-    try {
-      const updated = await addBotToBattleRoom(room.code);
-      setParticipants(updated);
-    } catch (err: any) {
-      setError(err?.message || 'Failed to add rival bot');
-    }
+    const botId = 'bot_' + Math.random().toString(36).substring(2, 7);
+    const botPlayer: BattleParticipant = {
+      id: botId,
+      room_id: room.id,
+      user_id: botId,
+      name: 'DBMS Rival 🧠',
+      score: 0,
+      answers: [],
+      joined_at: new Date().toISOString(),
+    };
+    setParticipants((prev) => [...prev.filter((p) => !p.user_id.startsWith('bot_')), botPlayer]);
   };
 
   const handleStartBattle = async () => {
@@ -198,9 +200,26 @@ export const BattleLobbyScreen: React.FC<BattleLobbyScreenProps> = ({ onStartGam
                 Host a Battle Room
               </h2>
               <p className="text-xs sm:text-sm text-slate-500 mt-1.5 leading-relaxed font-medium">
-                Create a private 6-digit match code and share it with your friend.
+                Create a private 5-digit match code and challenge peers in real-time.
               </p>
             </div>
+
+            {topics.length > 0 && (
+              <div className="space-y-1.5 text-left">
+                <label className="text-xs font-bold text-slate-600 block">Select Battle Topic</label>
+                <select
+                  value={selectedTopicId}
+                  onChange={(e) => setSelectedTopicId(e.target.value)}
+                  className="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 outline-none focus:border-indigo-500 focus:bg-white transition-all cursor-pointer"
+                >
+                  {topics.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <button
               type="button"
@@ -277,7 +296,7 @@ export const BattleLobbyScreen: React.FC<BattleLobbyScreenProps> = ({ onStartGam
                 {participants.length >= 2 ? 'Lobby Status: Ready to Duel' : 'Waiting for challenger'}
               </span>
               <span className="block text-sm font-black text-indigo-700 mt-0.5">
-                {participants.length} / 2 Players Connected
+                {participants.length} / 4 Players Connected (Max 4)
               </span>
             </div>
           </div>

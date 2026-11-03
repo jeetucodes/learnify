@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, Lock, User, ArrowRight } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { LearnifyLogo } from '../components/LearnifyLogo';
 
@@ -9,7 +9,7 @@ interface LoginScreenProps {
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess, onBackToLanding }) => {
-  const { signInWithEmail, signUpWithEmail, signInWithGoogle } = useAuth();
+  const { signInWithEmail, signUpWithEmail, signInWithGoogle, guestLogin } = useAuth();
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -44,6 +44,19 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess, onBackToLan
       onSuccess();
     } catch (err: any) {
       setError(err.message || 'Google sign-in encountered an issue.');
+    }
+  };
+
+  const handleGuest = async () => {
+    setError(null);
+    setSubmitting(true);
+    try {
+      await guestLogin();
+      onSuccess();
+    } catch (err: any) {
+      setError(err.message || 'Failed to initialize student session.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -183,7 +196,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess, onBackToLan
             </span>
           </div>
 
-          {/* Google Authentication */}
+          {/* Google Authentication & Instant Access */}
           <div className="space-y-2.5">
             <button
               type="button"
@@ -209,6 +222,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess, onBackToLan
                 />
               </svg>
               <span>Continue with Google</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleGuest}
+              className="bg-indigo-50/80 hover:bg-indigo-100/90 border border-indigo-200 text-indigo-900 w-full h-11 rounded-full text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-all shadow-xs"
+            >
+              <Sparkles className="w-4 h-4 text-indigo-600" />
+              <span>Explore as Guest Scholar (Instant Access)</span>
             </button>
           </div>
 

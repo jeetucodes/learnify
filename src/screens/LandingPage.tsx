@@ -5,7 +5,6 @@ import {
   Check,
   Plus,
   Minus,
-  Star,
   Play,
   RotateCw,
 } from 'lucide-react';
@@ -20,6 +19,7 @@ import {
   SugaryStar,
   SugaryTarget,
   SugaryCheck,
+  SugarySparkles,
 } from '../components/SugaryIcons';
 
 interface LandingPageProps {
@@ -219,10 +219,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
   const [activeUnitTab, setActiveUnitTab] = useState(1);
 
   // Interactive Phone Mockup Quiz state
-  const [selectedOption, setSelectedOption] = useState<number | null>(1); // default solved
-  const [demoScore, setDemoScore] = useState(140);
-  const [demoStreak, setDemoStreak] = useState(3);
-  const [showExplanation, setShowExplanation] = useState(true);
+  const [selectedOption, setSelectedOption] = useState<number | null>(null);
+  const [demoScore, setDemoScore] = useState(0);
+  const [demoStreak, setDemoStreak] = useState(1);
+  const [showExplanation, setShowExplanation] = useState(false);
 
   const toggleFaq = (idx: number) => {
     setExpandedFaq(expandedFaq === idx ? null : idx);
@@ -233,17 +233,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
     setShowExplanation(true);
     if (idx === 1) {
       // Correct!
-      setDemoScore(150);
-      setDemoStreak(4);
+      setDemoScore(10);
+      setDemoStreak(1);
     } else {
-      setDemoScore(140);
+      setDemoScore(0);
     }
   };
 
   const handleResetDemo = () => {
     setSelectedOption(null);
     setShowExplanation(false);
-    setDemoScore(140);
+    setDemoScore(0);
   };
 
   const handleWaitlistSubmit = async (e: React.FormEvent) => {
@@ -452,20 +452,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
                 </a>
               </div>
 
-              {/* Social Proof Line */}
-              <div className="mt-6 pt-5 border-t border-[#38315A]/10 flex items-center gap-3 text-xs text-[var(--dp-color-ink-secondary)] font-semibold">
-                <div className="flex -space-x-2">
-                  {['#BFEFD9', '#FFE29A', '#C9E4FB', '#F8CFE3'].map((bg, i) => (
-                    <div
-                      key={i}
-                      className="w-6 h-6 rounded-full border-2 border-white flex items-center justify-center text-[10px] font-black text-slate-800"
-                      style={{ backgroundColor: bg }}
-                    >
-                      {['A', 'R', 'S', 'P'][i]}
-                    </div>
-                  ))}
-                </div>
-                <span>Prepping 1,420+ college students for upcoming end-semesters.</span>
+              {/* Curriculum Highlight Line */}
+              <div className="mt-6 pt-5 border-t border-[#38315A]/10 flex items-center gap-2.5 text-xs text-[var(--dp-color-ink-secondary)] font-semibold">
+                <SugaryBook size={20} />
+                <span>Mapped to university DBMS curriculum · 40 verified MCQs across 3 comprehensive units</span>
               </div>
 
             </div>
@@ -965,90 +955,78 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
         </div>
       </section>
 
-      {/* 6. REAL STUDENT TESTIMONIALS (NEW) */}
+      {/* 6. ACADEMIC HIGHLIGHTS & ARCHITECTURE */}
       <section className="relative w-full max-w-full px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
         <div className="mx-auto w-full max-w-6xl text-left">
           
           <div className="text-center max-w-xl mx-auto mb-10">
             <h2 className="text-[clamp(1.85rem,4.5vw,2.75rem)] font-black tracking-tight text-[var(--dp-color-ink)]">
-              Loved by university students.
+              Engineered for College Exams
             </h2>
             <p className="mt-2 text-base text-[var(--dp-color-ink-secondary)] font-medium">
-              From midterms to end-semester papers, here is what students say.
+              Every feature is built around the way university computer science courses are graded.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             
-            {/* Review 1 */}
+            {/* Feature Pillar 1 */}
             <div className="clay-cushion-cream p-7 rounded-3xl flex flex-col justify-between text-left">
               <div>
-                <div className="flex items-center gap-1 text-amber-500 mb-3">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 fill-current" />
-                  ))}
+                <div className="w-12 h-12 rounded-2xl bg-[var(--dp-color-surface-cool)] flex items-center justify-center mb-4 shadow-xs">
+                  <SugaryBook size={28} />
                 </div>
-                <p className="text-sm font-medium text-[var(--dp-color-ink)] leading-relaxed italic">
-                  "Finally an exam prep app that isn't boring trivia. Practicing SQL and Normalization before our midterms with speed battles got me an A grade."
+                <h3 className="text-lg font-black text-[var(--dp-color-ink)] mb-2">
+                  Syllabus-Aligned Bank
+                </h3>
+                <p className="text-sm font-medium text-[var(--dp-color-ink-secondary)] leading-relaxed">
+                  Over 40 high-yield questions covering Relational Models, Normal Forms (1NF–BCNF), and ACID Concurrency, modeled after university semester papers.
                 </p>
               </div>
 
-              <div className="mt-6 pt-4 border-t border-[#38315A]/10 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[var(--dp-color-surface-support)] flex items-center justify-center font-bold text-emerald-950 text-sm">
-                  PS
-                </div>
-                <div>
-                  <span className="text-sm font-bold text-[var(--dp-color-ink)] block">Priya Sharma</span>
-                  <span className="text-xs text-slate-500 font-medium">B.Tech CSE, 3rd Year</span>
-                </div>
+              <div className="mt-6 pt-4 border-t border-[#38315A]/10 flex items-center justify-between text-xs font-bold text-indigo-700">
+                <span>3 Course Units</span>
+                <span>· 100% Free</span>
               </div>
             </div>
 
-            {/* Review 2 */}
+            {/* Feature Pillar 2 */}
             <div className="clay-cushion-cream p-7 rounded-3xl flex flex-col justify-between text-left">
               <div>
-                <div className="flex items-center gap-1 text-amber-500 mb-3">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 fill-current" />
-                  ))}
+                <div className="w-12 h-12 rounded-2xl bg-[var(--dp-color-surface-support)] flex items-center justify-center mb-4 shadow-xs">
+                  <SugarySparkles size={28} />
                 </div>
-                <p className="text-sm font-medium text-[var(--dp-color-ink)] leading-relaxed italic">
-                  "Uploading 20 pages of professor slides and getting 10 accurate MCQs in 3 seconds saved my finals. The explanations actually make sense."
+                <h3 className="text-lg font-black text-[var(--dp-color-ink)] mb-2">
+                  Notes-to-Quiz AI
+                </h3>
+                <p className="text-sm font-medium text-[var(--dp-color-ink-secondary)] leading-relaxed">
+                  Extracts text directly inside your browser with PDF.js and formulates structured multiple choice questions with explanations grounded in your exact course slides.
                 </p>
               </div>
 
-              <div className="mt-6 pt-4 border-t border-[#38315A]/10 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[var(--dp-color-surface-warm)] flex items-center justify-center font-bold text-amber-950 text-sm">
-                  RM
-                </div>
-                <div>
-                  <span className="text-sm font-bold text-[var(--dp-color-ink)] block">Rahul Mehta</span>
-                  <span className="text-xs text-slate-500 font-medium">IT Engineering</span>
-                </div>
+              <div className="mt-6 pt-4 border-t border-[#38315A]/10 flex items-center justify-between text-xs font-bold text-emerald-800">
+                <span>Direct PDF Upload</span>
+                <span>· Instant Generation</span>
               </div>
             </div>
 
-            {/* Review 3 */}
+            {/* Feature Pillar 3 */}
             <div className="clay-cushion-cream p-7 rounded-3xl flex flex-col justify-between text-left">
               <div>
-                <div className="flex items-center gap-1 text-amber-500 mb-3">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 fill-current" />
-                  ))}
+                <div className="w-12 h-12 rounded-2xl bg-[var(--dp-color-surface-warm)] flex items-center justify-center mb-4 shadow-xs">
+                  <SugarySwords size={28} />
                 </div>
-                <p className="text-sm font-medium text-[var(--dp-color-ink)] leading-relaxed italic">
-                  "The spaced revision queue means I actually remember 3NF vs BCNF on exam day instead of blanking out. 10/10 recommendation."
+                <h3 className="text-lg font-black text-[var(--dp-color-ink)] mb-2">
+                  Spaced Review & 1v1 Battle
+                </h3>
+                <p className="text-sm font-medium text-[var(--dp-color-ink-secondary)] leading-relaxed">
+                  Automated Leitner review queue isolates weak topics under 60% accuracy, while real-time speed battles let you duel classmates on synchronized questions.
                 </p>
               </div>
 
-              <div className="mt-6 pt-4 border-t border-[#38315A]/10 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[var(--dp-color-surface-cool)] flex items-center justify-center font-bold text-sky-950 text-sm">
-                  AK
-                </div>
-                <div>
-                  <span className="text-sm font-bold text-[var(--dp-color-ink)] block">Aman Khan</span>
-                  <span className="text-xs text-slate-500 font-medium">Software Engineering</span>
-                </div>
+              <div className="mt-6 pt-4 border-t border-[#38315A]/10 flex items-center justify-between text-xs font-bold text-amber-900">
+                <span>Spaced Repetition</span>
+                <span>· Multiplayer Sync</span>
               </div>
             </div>
 
@@ -1206,7 +1184,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
               Ready to rank up?
             </h2>
             <p className="mt-3 text-base sm:text-lg text-[var(--dp-color-ink-secondary)] leading-relaxed font-medium">
-              Join thousands of students prepping the smarter way. No credit card required.
+              Master your semester syllabus the smarter way. 100% free and open for university students.
             </p>
           </div>
 
