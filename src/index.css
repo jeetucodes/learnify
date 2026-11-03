@@ -1,0 +1,500 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ground: #EEF0FB;
+  --color-ink: #2B2540;
+  --color-ink-secondary: #433C5C;
+  --color-accent: #B8A7F9;
+  --color-primary-action: #4A3FD1;
+  --color-surface: #FFFDF7;
+  --color-surface-support: #BFEFD9;
+  --color-surface-compare: #F8CFE3;
+  --color-surface-warm: #FFE29A;
+  --color-surface-cool: #C9E4FB;
+  --color-focus: #4A3FD1;
+
+  --font-clay: "Learnify Instrument", "Instrument Sans", sans-serif;
+
+  --radius-surface: 38px;
+  --radius-tray: 70px;
+  --radius-control: 999px;
+  --radius-disclosure: 25px;
+}
+
+@font-face {
+  font-family: "Learnify Instrument";
+  src: local("Instrument Sans"), local("InstrumentSans-Regular");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* Learnify Clay Authoritative Tokens */
+  --dp-color-ground: #EEF0FB;
+  --dp-color-ink: #2B2540;
+  --dp-color-ink-secondary: #433C5C;
+  --dp-color-accent: #B8A7F9;
+  --dp-color-primary-action: #4A3FD1;
+  --dp-color-surface: #FFFDF7;
+  --dp-color-surface-support: #BFEFD9;
+  --dp-color-surface-compare: #F8CFE3;
+  --dp-color-surface-warm: #FFE29A;
+  --dp-color-surface-cool: #C9E4FB;
+  --dp-color-focus: #4A3FD1;
+
+  --dp-typography-face: "Learnify Instrument", "Instrument Sans", sans-serif;
+  --dp-typography-body: 16px;
+  --dp-typography-small: 15px;
+  --dp-typography-metadata: 13px;
+  --dp-typography-caption: 12px;
+  --dp-typography-reading-leading: 1.55;
+  --dp-typography-emphasis: 700;
+
+  --dp-spacing-gap: 24px;
+  --dp-spacing-gap-compact: 20px;
+  --dp-spacing-paragraph-gap: 18px;
+
+  --dp-radius-surface: 38px;
+  --dp-radius-tray: 70px;
+  --dp-radius-control: 999px;
+  --dp-radius-disclosure: 25px;
+
+  --dp-border-focus-width: 3px;
+  --dp-motion-interaction: 180ms;
+
+  /* Authoritative Learnify Clay Shadow Recipe (Upper-left light direction) */
+  --clay-shadow-cushion: 16px 20px 36px rgba(56, 49, 90, 0.16), inset 8px 8px 16px rgba(255, 255, 255, 0.8), inset -10px -10px 20px rgba(88, 70, 160, 0.16);
+  --clay-shadow-recessed: inset 6px 6px 12px rgba(56, 49, 90, 0.18), inset -6px -6px 12px rgba(255, 255, 255, 0.8);
+  --clay-shadow-cream-tray: 18px 24px 44px rgba(56, 49, 90, 0.11), inset 8px 8px 16px rgba(255, 255, 255, 0.95), inset -8px -8px 16px rgba(180, 170, 210, 0.15);
+  --clay-shadow-cream-cushion: 14px 18px 32px rgba(56, 49, 90, 0.11), inset 6px 6px 14px rgba(255, 255, 255, 0.95), inset -6px -6px 14px rgba(180, 170, 210, 0.15);
+  --clay-shadow-primary-btn: 6px 10px 22px rgba(74, 63, 209, 0.35), inset 3px 3px 6px rgba(255, 255, 255, 0.45), inset -4px -4px 8px rgba(35, 28, 120, 0.3);
+  --clay-shadow-secondary-btn: 6px 10px 20px rgba(56, 49, 90, 0.12), inset 3px 3px 6px rgba(255, 255, 255, 0.95), inset -3px -3px 6px rgba(180, 170, 210, 0.18);
+  --clay-shadow-mint: 14px 18px 30px rgba(56, 49, 90, 0.12), inset 6px 6px 14px rgba(255, 255, 255, 0.9), inset -8px -8px 16px rgba(100, 180, 140, 0.22);
+  --clay-shadow-blue: 14px 18px 30px rgba(56, 49, 90, 0.12), inset 6px 6px 14px rgba(255, 255, 255, 0.9), inset -8px -8px 16px rgba(80, 130, 200, 0.22);
+  --clay-shadow-yellow: 14px 18px 30px rgba(56, 49, 90, 0.12), inset 6px 6px 14px rgba(255, 255, 255, 0.9), inset -8px -8px 16px rgba(210, 160, 60, 0.22);
+  --clay-shadow-pink: 16px 20px 36px rgba(56, 49, 90, 0.14), inset 8px 8px 16px rgba(255, 255, 255, 0.9), inset -10px -10px 20px rgba(190, 110, 150, 0.18);
+
+}
+
+/* Industrial tokens scoped exclusively to inner chassis housing */
+.chassis-housing {
+  --dp-color-chassis: #cbd0d2;
+  --dp-color-raised: #e7eaeb;
+  --dp-color-well: #b6bec2;
+  --dp-color-ink: #181e22;
+  --dp-color-label: #414b52;
+  --dp-color-field: #20272b;
+  --dp-color-on-field: #f2f4f4;
+  --dp-color-on-field-muted: #d8dee1;
+  --dp-color-accent: #f15b22;
+
+  --dp-typography-sans: "Industrial Host", "Host Grotesk", system-ui, -apple-system, sans-serif;
+  --dp-typography-mono: "Industrial Plex", "IBM Plex Mono", Consolas, monospace;
+  --dp-typography-body: 17px;
+  --dp-typography-reading: 16px;
+  --dp-typography-metadata: 13px;
+  --dp-typography-label: 11px;
+
+  --dp-spacing-column-gap: 25px;
+  --dp-spacing-compact-gap: 12px;
+  --dp-radius-key: 4px;
+  --dp-radius-circular: 50%;
+  --dp-border-hairline: 1px;
+
+  --dp-motion-navigation: 130ms;
+  --dp-motion-key: 140ms;
+  --dp-motion-dial: 150ms;
+  --dp-motion-settle: cubic-bezier(0.3, 0.7, 0.4, 1.25);
+}
+
+/* Learnify Clay Utility Classes */
+.font-clay {
+  font-family: var(--dp-typography-face);
+}
+
+.clay-cushion-violet {
+  background-color: var(--dp-color-accent);
+  border-radius: var(--dp-radius-surface);
+  box-shadow: var(--clay-shadow-cushion);
+}
+
+.clay-tray-cream {
+  background-color: var(--dp-color-surface);
+  border-radius: var(--dp-radius-tray);
+  box-shadow: var(--clay-shadow-cream-tray);
+}
+
+.clay-cushion-cream {
+  background-color: var(--dp-color-surface);
+  border-radius: var(--dp-radius-surface);
+  box-shadow: var(--clay-shadow-cream-cushion);
+}
+
+.clay-cushion-mint {
+  background-color: var(--dp-color-surface-support);
+  border-radius: var(--dp-radius-surface);
+  box-shadow: var(--clay-shadow-mint);
+}
+
+.clay-cushion-yellow {
+  background-color: var(--dp-color-surface-warm);
+  border-radius: var(--dp-radius-surface);
+  box-shadow: var(--clay-shadow-yellow);
+}
+
+.clay-cushion-blue {
+  background-color: var(--dp-color-surface-cool);
+  border-radius: var(--dp-radius-surface);
+  box-shadow: var(--clay-shadow-blue);
+}
+
+.clay-tray-pink {
+  background-color: var(--dp-color-surface-compare);
+  border-radius: var(--dp-radius-tray);
+  box-shadow: var(--clay-shadow-pink);
+}
+
+.clay-recessed-well {
+  box-shadow: var(--clay-shadow-recessed);
+}
+
+.clay-btn-primary {
+  background-color: var(--dp-color-primary-action);
+  color: var(--dp-color-surface);
+  border-radius: var(--dp-radius-control);
+  box-shadow: var(--clay-shadow-primary-btn);
+  transition: transform var(--dp-motion-interaction) ease, box-shadow var(--dp-motion-interaction) ease;
+}
+
+.clay-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 8px 14px 28px rgba(74, 63, 209, 0.42), inset 3px 3px 6px rgba(255, 255, 255, 0.55), inset -4px -4px 8px rgba(35, 28, 120, 0.35);
+}
+
+.clay-btn-primary:active {
+  transform: translateY(1px) scale(0.98);
+  box-shadow: inset 4px 4px 8px rgba(0, 0, 0, 0.28), inset -2px -2px 4px rgba(255, 255, 255, 0.2);
+}
+
+.clay-btn-secondary {
+  background-color: var(--dp-color-surface);
+  color: var(--dp-color-ink);
+  border-radius: var(--dp-radius-control);
+  box-shadow: var(--clay-shadow-secondary-btn);
+  transition: transform var(--dp-motion-interaction) ease, box-shadow var(--dp-motion-interaction) ease;
+}
+
+.clay-btn-secondary:hover {
+  transform: translateY(-2px);
+  box-shadow: 8px 12px 24px rgba(56, 49, 90, 0.16), inset 3px 3px 6px rgba(255, 255, 255, 1), inset -3px -3px 6px rgba(180, 170, 210, 0.22);
+}
+
+.clay-btn-secondary:active {
+  transform: translateY(1px) scale(0.98);
+  box-shadow: inset 3px 3px 6px rgba(56, 49, 90, 0.2), inset -2px -2px 4px rgba(255, 255, 255, 0.8);
+}
+
+.clay-focus:focus-visible {
+  outline: var(--dp-border-focus-width) solid var(--dp-color-focus);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@layer base {
+  body {
+    background-color: #1a2024;
+    color: var(--dp-color-ink);
+    font-family: var(--dp-typography-sans);
+    font-size: var(--dp-typography-reading);
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+
+  /* Custom scrollbar matching industrial chassis */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #b6bec2;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #8e989d;
+    border-radius: var(--dp-radius-key);
+    border: 1px solid #7c878d;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #737f84;
+  }
+}
+
+/* Industrial Utility Classes */
+.font-sans-industrial {
+  font-family: var(--dp-typography-sans);
+}
+
+.font-mono-industrial {
+  font-family: var(--dp-typography-mono);
+}
+
+/* 1. Continuous Chassis Housing */
+.chassis-housing {
+  background-color: var(--dp-color-chassis);
+  background-image: 
+    linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, rgba(0, 0, 0, 0.05) 100%),
+    repeating-linear-gradient(90deg, transparent, transparent 49px, rgba(0,0,0,0.02) 50px);
+  border: 1px solid #9aa3a8;
+  border-top-color: #ffffff;
+  border-left-color: #f0f3f4;
+  box-shadow: 
+    0 10px 30px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    inset 1px 0 0 rgba(255, 255, 255, 0.6),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.15);
+}
+
+/* 2. Narrow vertical seam */
+.chassis-seam {
+  box-shadow: 
+    inset 1px 0 0 #9ca5aa,
+    inset -1px 0 0 #ffffff;
+}
+
+/* 3. Raised Key */
+.key-raised {
+  background-color: var(--dp-color-raised);
+  background-image: linear-gradient(180deg, #f7f9fa 0%, var(--dp-color-raised) 80%, #d8dde0 100%);
+  color: var(--dp-color-ink);
+  border-radius: var(--dp-radius-key);
+  border: 1px solid #c2c9cd;
+  border-top-color: #ffffff;
+  border-left-color: #ffffff;
+  box-shadow: 
+    0 2px 0 #8b959b,
+    0 3px 5px rgba(0, 0, 0, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  transition: 
+    transform var(--dp-motion-key) var(--dp-motion-settle),
+    box-shadow var(--dp-motion-key) var(--dp-motion-settle),
+    background-color var(--dp-motion-key);
+}
+
+.key-raised:hover {
+  transform: translateY(-1px);
+  background-color: #edf0f1;
+  box-shadow: 
+    0 3px 0 #8b959b,
+    0 5px 8px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.key-raised:active,
+.key-raised[data-state="active"],
+.key-raised.active {
+  transform: translateY(2px);
+  background-image: linear-gradient(180deg, #d8dde0 0%, #e2e6e8 100%);
+  box-shadow: 
+    0 0 0 #8b959b,
+    inset 0 2px 4px rgba(0, 0, 0, 0.25);
+}
+
+.key-raised:focus-visible {
+  outline: 2px solid var(--dp-color-accent);
+  outline-offset: 2px;
+}
+
+/* 4. Raised Orange Accent Key */
+.key-accent {
+  background-color: var(--dp-color-accent);
+  background-image: linear-gradient(180deg, #ff7138 0%, var(--dp-color-accent) 80%, #d14612 100%);
+  color: #ffffff;
+  border-radius: var(--dp-radius-key);
+  border: 1px solid #b83d10;
+  border-top-color: #ffa580;
+  box-shadow: 
+    0 2px 0 #942f09,
+    0 3px 6px rgba(241, 91, 34, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  transition: 
+    transform var(--dp-motion-key) var(--dp-motion-settle),
+    box-shadow var(--dp-motion-key) var(--dp-motion-settle);
+}
+
+.key-accent:hover {
+  transform: translateY(-1px);
+  box-shadow: 
+    0 3px 0 #942f09,
+    0 5px 10px rgba(241, 91, 34, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.key-accent:active {
+  transform: translateY(2px);
+  background-image: linear-gradient(180deg, #d14612 0%, #e04f18 100%);
+  box-shadow: 
+    0 0 0 #942f09,
+    inset 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+.key-accent:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+
+/* 5. Circular Dial-Shaped Action Button */
+.dial-action {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #ffffff 0%, #cbd0d2 55%, #9aa3a8 100%);
+  border: 2px solid #7c878d;
+  box-shadow: 
+    0 3px 0 #6d787e,
+    0 6px 12px rgba(0, 0, 0, 0.25),
+    inset 0 2px 3px rgba(255, 255, 255, 0.8),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.3);
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform var(--dp-motion-dial) var(--dp-motion-settle);
+  cursor: pointer;
+}
+
+.dial-action:hover {
+  transform: translateY(-1px) rotate(4deg);
+}
+
+.dial-action:active {
+  transform: translateY(2px) rotate(12deg);
+  box-shadow: 
+    0 1px 0 #6d787e,
+    inset 0 2px 5px rgba(0, 0, 0, 0.4);
+}
+
+.dial-action:focus-visible {
+  outline: 2px solid var(--dp-color-accent);
+  outline-offset: 3px;
+}
+
+/* 6. Recessed Well (for trays, modules, slots) */
+.recessed-well {
+  background-color: var(--dp-color-well);
+  border: 1px solid #8e989d;
+  border-bottom-color: #e2e6e8;
+  border-right-color: #e2e6e8;
+  box-shadow: 
+    inset 0 2px 4px rgba(0, 0, 0, 0.22),
+    inset 1px 1px 2px rgba(0, 0, 0, 0.15),
+    0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+/* 7. Recessed Dark Screen Field */
+.recessed-screen {
+  background-color: var(--dp-color-field);
+  color: var(--dp-color-on-field);
+  border: 1px solid #14191c;
+  border-bottom-color: #313c42;
+  border-right-color: #313c42;
+  box-shadow: 
+    inset 0 3px 8px rgba(0, 0, 0, 0.7),
+    inset 0 0 2px rgba(0, 0, 0, 0.9),
+    0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+/* 8. Small Orange Indicator Lamp */
+.indicator-lamp {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: var(--dp-color-accent);
+  box-shadow: 
+    0 0 5px var(--dp-color-accent),
+    0 0 9px rgba(241, 91, 34, 0.7),
+    inset 0 1px 1px #ff9566;
+  border: 1px solid #822704;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.indicator-lamp-off {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #55443d;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6);
+  border: 1px solid #3d312c;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.indicator-lamp-green {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #10b981;
+  box-shadow: 
+    0 0 5px #10b981,
+    0 0 9px rgba(16, 185, 129, 0.6),
+    inset 0 1px 1px #6ee7b7;
+  border: 1px solid #065f46;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+/* 9. Vent Slots */
+.vent-slot {
+  height: 3px;
+  background-color: #9da5aa;
+  border-radius: 9999px;
+  box-shadow: 
+    inset 0 1px 2px rgba(0, 0, 0, 0.6),
+    0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+/* 10. Industrial Screw Head */
+.chassis-screw {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 40%, #e7eaeb 0%, #b6bec2 60%, #8e989d 100%);
+  border: 1px solid #7c878d;
+  box-shadow: 
+    0 1px 0 rgba(255, 255, 255, 0.8),
+    inset 0 1px 1px rgba(0,0,0,0.3);
+  position: relative;
+  flex-shrink: 0;
+}
+.chassis-screw::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(38deg);
+  width: 5px;
+  height: 1px;
+  background-color: #5c666c;
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .key-raised,
+  .key-accent,
+  .dial-action {
+    transition: none !important;
+    transform: none !important;
+  }
+}

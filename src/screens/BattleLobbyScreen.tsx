@@ -1,0 +1,319 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Swords,
+  Copy,
+  Check,
+  Users,
+  Play,
+  ArrowRight,
+  Sparkles,
+  Trophy,
+} from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import {
+  createBattleRoom,
+  joinBattleRoom,
+  startBattle,
+  getBattleParticipants,
+  getBattleChannel,
+} from '../lib/storage';
+import type { BattleRoom, BattleParticipant } from '../types/database';
+
+interface BattleLobbyScreenProps {
+  onStartGame: (room: BattleRoom, participants: BattleParticipant[]) => void;
+}
+
+export const BattleLobbyScreen: React.FC<BattleLobbyScreenProps> = ({ onStartGame }) => {
+  const { user } = useAuth();
+  const [room, setRoom] = useState<BattleRoom | null>(null);
+  const [participants, setParticipants] = useState<BattleParticipant[]>([]);
+  const [joinCodeInput, setJoinCodeInput] = useState('');
+  const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!room) return;
+
+    const channel = getBattleChannel(room.code);
+    const handleMessage = (e: MessageEvent) => {
+      const data = e.data;
+      if (data?.type === 'ROOM_UPDATED') {
+        setRoom(data.room);
+        setParticipants(data.participants);
+      } else if (data?.type === 'BATTLE_STARTED') {
+        onStartGame(data.room, participants);
+      }
+    };
+
+    channel.addEventListener('message', handleMessage);
+
+    getBattleParticipants(room.code).then((p) => {
+      setParticipants(p);
+    });
+
+    return () => {
+      channel.removeEventListener('message', handleMessage);
+    };
+  }, [room?.code, onStartGame, participants]);
+
+  const handleCreateRoom = async () => {
+    if (!user) return;
+    setError(null);
+    setLoading(true);
+    try {
+      const newRoom = await createBattleRoom(user.id, user.name);
+      setRoom(newRoom);
+      const parts = await getBattleParticipants(newRoom.code);
+      setParticipants(parts);
+    } catch (err: any) {
+      setError(err.message || 'Failed to initialize battle room');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleJoinRoom = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !joinCodeInput.trim()) return;
+
+    setError(null);
+    setLoading(true);
+    try {
+      const { room: joinedRoom, participants: parts } = await joinBattleRoom(
+        joinCodeInput.trim().toUpperCase(),
+        user.id,
+        user.name
+      );
+      setRoom(joinedRoom);
+      setParticipants(parts);
+    } catch (err: any) {
+      setError(err.message || 'Room code verification failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStartBattle = async () => {
+    if (!room || !user) return;
+    setError(null);
+    setLoading(true);
+    try {
+      const started = await startBattle(room.code, user.id);
+      onStartGame(started, participants);
+    } catch (err: any) {
+      setError(err.message || 'Failed to start battle');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCopyCode = () => {
+    if (!room) return;
+    navigator.clipboard.writeText(room.code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const isHost = room && user && room.host_id === user.id;
+
+  return (
+    <div className="max-w-3xl mx-auto space-y-6 pb-20 text-left font-clay">
+      
+      {/* Header Banner (Warm Yellow Cushion) */}
+      <div className="clay-cushion-yellow p-6 sm:p-10 rounded-3xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="inline-flex items-center gap-2 rounded-full bg-[#FFFDF7]/70 px-3.5 py-1 text-xs font-bold text-[var(--dp-color-ink)] mb-3 shadow-xs">
+            <Swords className="h-3.5 w-3.5 text-[#D97706]" />
+            <span>Real-time Multiplayer Duel</span>
+          </div>
+
+          <h1 className="text-2xl sm:text-4xl font-extrabold text-[var(--dp-color-ink)] leading-tight">
+            1v1 Speed Battle
+          </h1>
+          <p className="mt-2 text-sm sm:text-base text-[var(--dp-color-ink-secondary)] leading-relaxed max-w-lg">
+            Challenge a classmate to 5 rapid-fire questions. Fastest correct answer claims the crown and bonus XP!
+          </p>
+        </div>
+
+        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-3xl bg-[#FFFDF7] shadow-xs self-start sm:self-auto">
+          <Trophy className="h-8 w-8 text-[#D97706]" />
+        </div>
+      </div>
+
+      {error && (
+        <div className="clay-tray-pink p-4 rounded-2xl text-xs sm:text-sm font-bold text-[#9F1239]">
+          {error}
+        </div>
+      )}
+
+      {/* Main Container */}
+      {!room ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          
+          {/* Create Room Clay Card */}
+          <div className="clay-tray-cream p-7 sm:p-8 rounded-3xl flex flex-col justify-between space-y-6">
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-[var(--dp-color-accent)] flex items-center justify-center shadow-xs mb-4">
+                <Sparkles className="w-6 h-6 text-[#2B2540]" />
+              </div>
+              <h2 className="text-xl font-bold text-[var(--dp-color-ink)]">
+                Host a Battle Room
+              </h2>
+              <p className="text-sm text-[var(--dp-color-ink-secondary)] mt-1.5 leading-relaxed">
+                Create a private 6-digit match code and share it with your friend.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              disabled={loading}
+              onClick={handleCreateRoom}
+              className="clay-btn-primary w-full py-3.5 text-base font-bold flex items-center justify-center gap-2 clay-focus cursor-pointer shadow-md disabled:opacity-50"
+            >
+              <span>{loading ? 'Creating...' : 'Create Battle Room'}</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Join Room Clay Card */}
+          <div className="clay-tray-cream p-7 sm:p-8 rounded-3xl flex flex-col justify-between space-y-6">
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-[var(--dp-color-surface-support)] flex items-center justify-center shadow-xs mb-4">
+                <Users className="w-6 h-6 text-[#2B2540]" />
+              </div>
+              <h2 className="text-xl font-bold text-[var(--dp-color-ink)]">
+                Join with Room Code
+              </h2>
+              <p className="text-sm text-[var(--dp-color-ink-secondary)] mt-1.5 leading-relaxed">
+                Enter the 6-character room code from your opponent to jump into their lobby.
+              </p>
+            </div>
+
+            <form onSubmit={handleJoinRoom} className="space-y-3">
+              <input
+                type="text"
+                maxLength={6}
+                value={joinCodeInput}
+                onChange={(e) => setJoinCodeInput(e.target.value.toUpperCase())}
+                placeholder="ENTER CODE (E.G. X7K9P2)"
+                className="w-full h-12 rounded-full bg-[#EEF0FB] px-5 text-center font-mono tracking-widest text-base font-bold text-[var(--dp-color-ink)] uppercase placeholder-[var(--dp-color-ink-secondary)]/50 focus:outline-none clay-focus shadow-[inset_2px_2px_4px_rgba(56,49,90,0.12)]"
+              />
+
+              <button
+                type="submit"
+                disabled={loading || joinCodeInput.length < 4}
+                className="clay-btn-secondary w-full py-3.5 text-base font-bold flex items-center justify-center gap-2 clay-focus cursor-pointer disabled:opacity-50"
+              >
+                <span>{loading ? 'Joining...' : 'Enter Battle Room'}</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </form>
+          </div>
+
+        </div>
+      ) : (
+        /* Active Waiting Lobby */
+        <div className="clay-tray-cream p-8 sm:p-10 rounded-3xl space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#38315A]/10">
+            <div>
+              <span className="text-xs font-bold uppercase tracking-wider text-[var(--dp-color-ink-secondary)] block">
+                Active Battle Room
+              </span>
+              <div className="flex items-center gap-3 mt-1">
+                <span className="font-mono text-3xl sm:text-4xl font-extrabold tracking-widest text-[var(--dp-color-ink)]">
+                  {room.code}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleCopyCode}
+                  className="clay-btn-secondary px-3 py-1.5 text-xs font-bold flex items-center gap-1.5 clay-focus cursor-pointer"
+                >
+                  {copied ? <Check className="w-3.5 h-3.5 text-[#059669]" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copied ? 'Copied!' : 'Copy Code'}</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="text-left sm:text-right">
+              <span className="text-xs font-bold text-[var(--dp-color-ink-secondary)]">
+                Status: Waiting for players
+              </span>
+              <span className="block text-sm font-bold text-[var(--dp-color-ink)]">
+                {participants.length} / 2 Players Connected
+              </span>
+            </div>
+          </div>
+
+          {/* Participant Cushions */}
+          <div>
+            <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--dp-color-ink-secondary)] mb-3">
+              Fighters in Lobby
+            </h3>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {participants.map((p, idx) => (
+                <div
+                  key={p.user_id}
+                  className="clay-cushion-cream p-4 rounded-2xl flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-[var(--dp-color-accent)] text-[var(--dp-color-ink)] font-bold flex items-center justify-center shadow-xs">
+                      {p.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <span className="font-bold text-base text-[var(--dp-color-ink)] block">
+                        {p.name}
+                      </span>
+                      <span className="text-xs text-[var(--dp-color-ink-secondary)]">
+                        {idx === 0 ? '👑 Room Host' : '⚔️ Challenger'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <span className="text-xs font-bold px-3 py-1 rounded-full bg-[var(--dp-color-surface-support)] text-[var(--dp-color-ink)]">
+                    Ready
+                  </span>
+                </div>
+              ))}
+
+              {participants.length < 2 && (
+                <div className="border-2 border-dashed border-[#38315A]/15 rounded-2xl p-4 flex items-center justify-center text-xs font-bold text-[var(--dp-color-ink-secondary)] min-h-[72px]">
+                  <span>Waiting for opponent to join...</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Action Trigger */}
+          <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <button
+              type="button"
+              onClick={() => setRoom(null)}
+              className="clay-btn-secondary px-5 py-2.5 text-sm font-bold clay-focus cursor-pointer w-full sm:w-auto"
+            >
+              Leave Room
+            </button>
+
+            {isHost ? (
+              <button
+                type="button"
+                disabled={loading}
+                onClick={handleStartBattle}
+                className="clay-btn-primary px-8 py-3.5 text-base font-bold flex items-center justify-center gap-2 clay-focus cursor-pointer shadow-md w-full sm:w-auto"
+              >
+                <Play className="w-4 h-4 fill-current" />
+                <span>Start Speed Duel Now</span>
+              </button>
+            ) : (
+              <div className="text-xs font-bold text-[var(--dp-color-ink-secondary)]">
+                Waiting for host to launch the duel...
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+};
