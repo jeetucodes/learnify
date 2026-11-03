@@ -101,13 +101,18 @@ function MainLayout() {
 
   return (
     <div className="min-h-screen bg-[var(--dp-color-ground)] text-[var(--dp-color-ink)] font-clay flex flex-col justify-between selection:bg-[var(--dp-color-accent)] selection:text-[var(--dp-color-ink)] antialiased">
-      {/* Top Navbar Component */}
-      <Navbar onNavigate={handleNavigate} currentRoute={currentRoute} />
+      {/* Top Navbar Component (hidden on login and landing screens) */}
+      {user && currentRoute !== 'login' && currentRoute !== 'landing' && (
+        <Navbar onNavigate={handleNavigate} currentRoute={currentRoute} />
+      )}
 
       {/* Main Operational Stage */}
       <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 relative">
-        {(!user && currentRoute !== 'login') ? (
-          <LoginScreen onSuccess={() => handleNavigate('home')} />
+        {(!user || currentRoute === 'login') ? (
+          <LoginScreen
+            onSuccess={() => handleNavigate('home')}
+            onBackToLanding={() => handleNavigate('landing')}
+          />
         ) : (
           <>
             {currentRoute === 'login' && (
@@ -188,7 +193,7 @@ function MainLayout() {
       </footer>
 
       {/* Bottom Nav on Mobile Devices */}
-      {currentRoute !== 'quiz' && currentRoute !== 'battle-game' && (
+      {user && currentRoute !== 'login' && currentRoute !== 'landing' && currentRoute !== 'quiz' && currentRoute !== 'battle-game' && (
         <BottomNav currentRoute={currentRoute} onNavigate={handleNavigate} />
       )}
     </div>

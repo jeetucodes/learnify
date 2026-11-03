@@ -5,9 +5,10 @@ import { SugaryBook, SugarySparkles } from '../components/SugaryIcons';
 
 interface LoginScreenProps {
   onSuccess: () => void;
+  onBackToLanding?: () => void;
 }
 
-export const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess }) => {
+export const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess, onBackToLanding }) => {
   const { signInWithEmail, signUpWithEmail, signInWithGoogle, guestLogin } = useAuth();
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
@@ -59,6 +60,17 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess }) => {
   return (
     <div className="min-h-[80vh] flex flex-col justify-center items-center px-4 py-8">
       <div className="w-full max-w-md">
+        {onBackToLanding && (
+          <div className="mb-3.5 text-left">
+            <button
+              type="button"
+              onClick={onBackToLanding}
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-indigo-600 transition-colors cursor-pointer bg-white/70 hover:bg-white border border-slate-200 px-3.5 py-1.5 rounded-full shadow-xs"
+            >
+              <span>← Back to Overview</span>
+            </button>
+          </div>
+        )}
         
         {/* Main Card */}
         <div className="bg-white border border-slate-200/80 shadow-[0_12px_40px_rgba(79,70,229,0.08)] p-7 sm:p-9 rounded-3xl space-y-6 text-center">
