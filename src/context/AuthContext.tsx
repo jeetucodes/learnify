@@ -17,6 +17,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   updateUserStats: (xpEarned: number, newTotalXp: number, newStreak: number) => void;
+  updateProfile: (updates: Partial<Profile>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -43,6 +44,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             avatar_url: profile?.avatar_url || session.user.user_metadata?.avatar_url,
             xp: profile?.xp ?? 0,
             streak: profile?.streak ?? 1,
+            college: profile?.college,
+            specialization: profile?.specialization || 'DBMS Specialization',
+            bio: profile?.bio,
             last_active: profile?.last_active || new Date().toISOString(),
           });
           setLoading(false);
@@ -82,6 +86,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             avatar_url: profile?.avatar_url || session.user.user_metadata?.avatar_url,
             xp: profile?.xp ?? 0,
             streak: profile?.streak ?? 1,
+            college: profile?.college,
+            specialization: profile?.specialization || 'DBMS Specialization',
+            bio: profile?.bio,
             last_active: profile?.last_active || new Date().toISOString(),
           });
         } else {
@@ -269,6 +276,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
+  const updateProfile = async (updates: Partial<Profile>) => {
+    if (!user) return;
+    const updatedProfile: Profile = {
+      id: user.id,
+      name: updates.name?.trim() || user.name,
+      avatar_url: updates.avatar_url !== undefined ? updates.avatar_url : user.avatar_url,
+      xp: user.xp,
+      streak: user.streak,
+      college: updates.college !== undefined ? updates.college : user.college,
+      specialization: updates.specialization !== undefined ? updates.specialization : user.specialization,
+      bio: updates.bio !== undefined ? updates.bio : user.bio,
+      last_active: new Date().toISOString(),
+    };
+
+    await saveProfile(updatedProfile);
+
+    const updatedUser: UserSession = {
+      ...user,
+      ...updatedProfile,
+    };
+    setUser(updatedUser);
+    localStorage.setItem('learnify_active_session', JSON.stringify(updatedUser));
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -281,6 +312,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout,
         refreshProfile,
         updateUserStats,
+        updateProfile,
       }}
     >
       {children}

@@ -13,20 +13,14 @@
   --color-surface-cool: #C9E4FB;
   --color-focus: #4A3FD1;
 
-  --font-clay: "Learnify Instrument", "Instrument Sans", sans-serif;
+  --font-sans: "Plus Jakarta Sans", "Outfit", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "IBM Plex Mono", Consolas, monospace;
+  --font-clay: "Plus Jakarta Sans", "Outfit", sans-serif;
 
   --radius-surface: 38px;
   --radius-tray: 70px;
   --radius-control: 999px;
   --radius-disclosure: 25px;
-}
-
-@font-face {
-  font-family: "Learnify Instrument";
-  src: local("Instrument Sans"), local("InstrumentSans-Regular");
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
 }
 
 :root {
@@ -43,7 +37,8 @@
   --dp-color-surface-cool: #EFF6FF;
   --dp-color-focus: #4F46E5;
 
-  --dp-typography-face: "Learnify Instrument", "Instrument Sans", sans-serif;
+  --dp-typography-face: "Plus Jakarta Sans", "Outfit", system-ui, sans-serif;
+  --dp-typography-mono: "JetBrains Mono", "IBM Plex Mono", Consolas, monospace;
   --dp-typography-body: 16px;
   --dp-typography-small: 15px;
   --dp-typography-metadata: 13px;
@@ -74,7 +69,23 @@
   --clay-shadow-blue: 0 8px 24px -4px rgba(59, 130, 246, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.95);
   --clay-shadow-yellow: 0 8px 24px -4px rgba(245, 158, 11, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.95);
   --clay-shadow-pink: 0 8px 24px -4px rgba(244, 63, 94, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
 
+html, body {
+  font-family: var(--dp-typography-face);
+  letter-spacing: -0.012em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--dp-typography-face);
+  letter-spacing: -0.024em;
+}
+
+.font-mono {
+  font-family: var(--dp-typography-mono) !important;
+  font-feature-settings: "tnum" 1, "zero" 1;
 }
 
 /* Industrial tokens scoped exclusively to inner chassis housing */

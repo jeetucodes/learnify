@@ -5,6 +5,9 @@ export interface Profile {
   xp: number;
   streak: number;
   last_active: string;
+  college?: string;
+  specialization?: string;
+  bio?: string;
   created_at?: string;
 }
 

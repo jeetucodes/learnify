@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import {
   LogOut,
+  Edit3,
+  Check,
+  GraduationCap,
+  Building2,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getUserAttempts } from '../lib/storage';
@@ -13,6 +17,7 @@ import {
   SugaryTrophy,
   SugaryCalendar,
   SugaryClock,
+  SugaryCheck,
 } from '../components/SugaryIcons';
 import type { Attempt } from '../types/database';
 
@@ -20,10 +25,40 @@ interface ProfileScreenProps {
   onNavigate: (route: string) => void;
 }
 
+const PRESET_AVATARS = [
+  { label: 'Shield (Default)', url: '' },
+  { label: 'Scholar A', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80' },
+  { label: 'Scholar B', url: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=160&auto=format&fit=crop&q=80' },
+  { label: 'Scholar C', url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=160&auto=format&fit=crop&q=80' },
+  { label: 'Scholar D', url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80' },
+  { label: 'Scholar E', url: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=160&auto=format&fit=crop&q=80' },
+  { label: 'Scholar F', url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=160&auto=format&fit=crop&q=80' },
+];
+
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate }) => {
-  const { user, logout } = useAuth();
+  const { user, logout, updateProfile } = useAuth();
   const [attempts, setAttempts] = useState<Attempt[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Edit Profile States
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editSpecialization, setEditSpecialization] = useState('');
+  const [editCollege, setEditCollege] = useState('');
+  const [editBio, setEditBio] = useState('');
+  const [editAvatarUrl, setEditAvatarUrl] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [showSuccessToast, setShowSuccessToast] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setEditName(user.name || '');
+      setEditSpecialization(user.specialization || 'DBMS Specialization');
+      setEditCollege(user.college || '');
+      setEditBio(user.bio || '');
+      setEditAvatarUrl(user.avatar_url || '');
+    }
+  }, [user]);
 
   useEffect(() => {
     if (user?.id) {
@@ -35,6 +70,40 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate }) => {
       setLoading(false);
     }
   }, [user?.id]);
+
+  const handleOpenEdit = () => {
+    if (user) {
+      setEditName(user.name || '');
+      setEditSpecialization(user.specialization || 'DBMS Specialization');
+      setEditCollege(user.college || '');
+      setEditBio(user.bio || '');
+      setEditAvatarUrl(user.avatar_url || '');
+      setIsEditing(true);
+    }
+  };
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editName.trim()) return;
+
+    setSaving(true);
+    try {
+      await updateProfile({
+        name: editName.trim(),
+        specialization: editSpecialization.trim() || 'DBMS Specialization',
+        college: editCollege.trim(),
+        bio: editBio.trim(),
+        avatar_url: editAvatarUrl.trim(),
+      });
+      setIsEditing(false);
+      setShowSuccessToast(true);
+      setTimeout(() => setShowSuccessToast(false), 3000);
+    } catch (err) {
+      console.error('Failed to update profile:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const totalQuestionsAnswered = attempts.length;
   const correctCount = attempts.filter((a) => a.correct).length;
@@ -99,32 +168,57 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate }) => {
           </div>
 
           <div className="flex-1 min-w-0">
-            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1">
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1.5">
               <span className="rounded-full bg-white border border-indigo-200 px-3 py-0.5 text-xs font-black text-indigo-700 shadow-xs">
                 Level {currentLevel} Scholar
               </span>
-              <span className="text-xs font-semibold text-slate-500">
-                DBMS Specialization
+              <span className="inline-flex items-center gap-1 text-xs font-bold text-slate-700 bg-white border border-slate-200 px-3 py-0.5 rounded-full shadow-xs">
+                <GraduationCap className="w-3.5 h-3.5 text-indigo-600" />
+                <span>{user.specialization || 'DBMS Specialization'}</span>
               </span>
+              {user.college && (
+                <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-full">
+                  <Building2 className="w-3 h-3 text-slate-400" />
+                  <span>{user.college}</span>
+                </span>
+              )}
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900 truncate">
               {user.name}
             </h1>
-            <div className="flex items-center justify-center sm:justify-start gap-1.5 text-xs text-slate-500 mt-1">
+
+            {user.bio && (
+              <p className="text-xs text-slate-600 mt-1 italic font-medium max-w-md">
+                "{user.bio}"
+              </p>
+            )}
+
+            <div className="flex items-center justify-center sm:justify-start gap-1.5 text-xs text-slate-500 mt-1.5">
               <SugaryCalendar size={15} />
               <span>Member since {new Date(user.last_active).toLocaleDateString()}</span>
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 px-4 py-2 rounded-full text-xs font-bold flex items-center gap-1.5 cursor-pointer shrink-0"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            <span>Sign Out</span>
-          </button>
+          <div className="flex flex-wrap sm:flex-col gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={handleOpenEdit}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-full text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer"
+            >
+              <Edit3 className="w-3.5 h-3.5" />
+              <span>Edit Profile</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 px-4 py-2 rounded-full text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Sign Out</span>
+            </button>
+          </div>
         </div>
 
         {/* Level Progress Bar */}
@@ -255,6 +349,203 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate }) => {
           </div>
         )}
       </div>
+
+      {/* Success Toast Notification */}
+      {showSuccessToast && (
+        <div className="fixed top-6 right-6 z-50 bg-emerald-600 text-white px-5 py-3 rounded-2xl shadow-[0_10px_30px_rgba(5,150,105,0.3)] flex items-center gap-2.5 text-xs sm:text-sm font-bold">
+          <SugaryCheck size={20} />
+          <span>Profile changes saved successfully!</span>
+        </div>
+      )}
+
+      {/* Edit Profile Modal */}
+      {isEditing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
+          <div className="bg-white border border-slate-200/90 shadow-2xl rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-6 text-left my-8">
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center shadow-xs">
+                  <Edit3 className="w-5 h-5 text-indigo-600" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-slate-900">
+                    Edit Student Profile
+                  </h3>
+                  <span className="text-xs text-slate-500 font-medium">
+                    Customize your profile display and avatar
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsEditing(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center text-sm font-bold cursor-pointer transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveProfile} className="space-y-4">
+              
+              {/* Avatar Selector */}
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-2">
+                  Choose Profile Avatar
+                </label>
+                
+                <div className="flex items-center gap-4 mb-3">
+                  <div className="w-16 h-16 rounded-2xl bg-slate-100 border-2 border-indigo-500 p-0.5 flex items-center justify-center shadow-xs overflow-hidden shrink-0">
+                    {editAvatarUrl ? (
+                      <img src={editAvatarUrl} alt="Preview" className="w-full h-full rounded-xl object-cover" />
+                    ) : (
+                      <SugaryShield size={38} />
+                    )}
+                  </div>
+                  <div>
+                    <span className="text-xs font-extrabold text-slate-800 block">
+                      Active Avatar Preview
+                    </span>
+                    <span className="text-[11px] text-slate-500">
+                      Pick a preset below or enter a custom image URL
+                    </span>
+                  </div>
+                </div>
+
+                {/* Preset Avatars Row */}
+                <div className="grid grid-cols-7 gap-2">
+                  {PRESET_AVATARS.map((av, idx) => {
+                    const isSelected = editAvatarUrl === av.url;
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setEditAvatarUrl(av.url)}
+                        className={`h-11 rounded-xl p-0.5 border-2 flex items-center justify-center cursor-pointer transition-all ${
+                          isSelected
+                            ? 'border-indigo-600 scale-105 shadow-xs bg-indigo-50'
+                            : 'border-slate-200 hover:border-indigo-300 bg-slate-50'
+                        }`}
+                        title={av.label}
+                      >
+                        {av.url ? (
+                          <img src={av.url} alt={av.label} className="w-full h-full rounded-lg object-cover" />
+                        ) : (
+                          <SugaryShield size={24} />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Custom URL optional input */}
+                <div className="mt-2.5">
+                  <input
+                    type="url"
+                    value={editAvatarUrl}
+                    onChange={(e) => setEditAvatarUrl(e.target.value)}
+                    placeholder="Or enter custom image URL (https://...)"
+                    className="w-full h-9 rounded-full bg-slate-50 border border-slate-200 px-3.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+              </div>
+
+              {/* Student Name */}
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  Full Name <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  placeholder="e.g. Alex Johnson"
+                  className="w-full h-11 rounded-full bg-slate-50 border border-slate-200 px-4 text-sm font-semibold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              {/* Specialization / Major */}
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  Specialization / Branch
+                </label>
+                <div className="relative">
+                  <GraduationCap className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={editSpecialization}
+                    onChange={(e) => setEditSpecialization(e.target.value)}
+                    placeholder="e.g. Computer Science & Engineering"
+                    className="w-full h-11 rounded-full bg-slate-50 border border-slate-200 pl-10 pr-4 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+              </div>
+
+              {/* College / University */}
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  College / University
+                </label>
+                <div className="relative">
+                  <Building2 className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={editCollege}
+                    onChange={(e) => setEditCollege(e.target.value)}
+                    placeholder="e.g. State University / NIT"
+                    className="w-full h-11 rounded-full bg-slate-50 border border-slate-200 pl-10 pr-4 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+              </div>
+
+              {/* Exam Goal / Bio */}
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  Exam Goal or Bio
+                </label>
+                <textarea
+                  rows={2}
+                  value={editBio}
+                  onChange={(e) => setEditBio(e.target.value)}
+                  placeholder="e.g. Preparing for end-sem DBMS finals. Targeting 90%+!"
+                  className="w-full rounded-2xl bg-slate-50 border border-slate-200 p-3 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                />
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => setIsEditing(false)}
+                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2.5 rounded-full text-xs font-bold cursor-pointer transition-colors"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={saving || !editName.trim()}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-7 py-2.5 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-sm hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  {saving ? (
+                    <span>Saving...</span>
+                  ) : (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Save Changes</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+            </form>
+          </div>
+        </div>
+      )}
 
     </div>
   );
