@@ -1,13 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Swords,
   Copy,
   Check,
   Users,
   Play,
   ArrowRight,
-  Sparkles,
-  Trophy,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -17,6 +14,7 @@ import {
   getBattleParticipants,
   getBattleChannel,
 } from '../lib/storage';
+import { SugarySwords, SugaryTrophy, SugarySparkles } from '../components/SugaryIcons';
 import type { BattleRoom, BattleParticipant } from '../types/database';
 
 interface BattleLobbyScreenProps {
@@ -118,31 +116,31 @@ export const BattleLobbyScreen: React.FC<BattleLobbyScreenProps> = ({ onStartGam
   const isHost = room && user && room.host_id === user.id;
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6 pb-20 text-left font-clay">
+    <div className="max-w-3xl mx-auto space-y-6 pb-20 text-left">
       
-      {/* Header Banner (Warm Yellow Cushion) */}
-      <div className="clay-cushion-yellow p-6 sm:p-10 rounded-3xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Header Banner */}
+      <div className="bg-gradient-to-br from-amber-50/90 via-white to-orange-50/80 border border-amber-200/80 p-6 sm:p-10 rounded-3xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-[0_8px_24px_rgba(245,158,11,0.06)]">
         <div>
-          <div className="inline-flex items-center gap-2 rounded-full bg-[#FFFDF7]/70 px-3.5 py-1 text-xs font-bold text-[var(--dp-color-ink)] mb-3 shadow-xs">
-            <Swords className="h-3.5 w-3.5 text-[#D97706]" />
+          <div className="inline-flex items-center gap-2 rounded-full bg-white px-3.5 py-1 text-xs font-bold text-amber-900 mb-3 border border-amber-200/80 shadow-xs">
+            <SugarySwords size={18} />
             <span>Real-time Multiplayer Duel</span>
           </div>
 
-          <h1 className="text-2xl sm:text-4xl font-extrabold text-[var(--dp-color-ink)] leading-tight">
+          <h1 className="text-2xl sm:text-4xl font-black text-slate-900 leading-tight">
             1v1 Speed Battle
           </h1>
-          <p className="mt-2 text-sm sm:text-base text-[var(--dp-color-ink-secondary)] leading-relaxed max-w-lg">
+          <p className="mt-2 text-xs sm:text-base text-slate-600 leading-relaxed max-w-lg">
             Challenge a classmate to 5 rapid-fire questions. Fastest correct answer claims the crown and bonus XP!
           </p>
         </div>
 
-        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-3xl bg-[#FFFDF7] shadow-xs self-start sm:self-auto">
-          <Trophy className="h-8 w-8 text-[#D97706]" />
+        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-3xl bg-white border border-amber-200 shadow-xs self-start sm:self-auto">
+          <SugaryTrophy size={38} />
         </div>
       </div>
 
       {error && (
-        <div className="clay-tray-pink p-4 rounded-2xl text-xs sm:text-sm font-bold text-[#9F1239]">
+        <div className="bg-rose-50 border border-rose-200 p-4 rounded-2xl text-xs sm:text-sm font-bold text-rose-800">
           {error}
         </div>
       )}
@@ -151,16 +149,16 @@ export const BattleLobbyScreen: React.FC<BattleLobbyScreenProps> = ({ onStartGam
       {!room ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           
-          {/* Create Room Clay Card */}
-          <div className="clay-tray-cream p-7 sm:p-8 rounded-3xl flex flex-col justify-between space-y-6">
+          {/* Create Room Card */}
+          <div className="bg-white border border-slate-200/80 shadow-[0_8px_24px_rgba(0,0,0,0.02)] p-7 sm:p-8 rounded-3xl flex flex-col justify-between space-y-6">
             <div>
-              <div className="w-12 h-12 rounded-2xl bg-[var(--dp-color-accent)] flex items-center justify-center shadow-xs mb-4">
-                <Sparkles className="w-6 h-6 text-[#2B2540]" />
+              <div className="w-14 h-14 rounded-2xl bg-purple-50 border border-purple-100 flex items-center justify-center shadow-xs mb-4">
+                <SugarySparkles size={34} />
               </div>
-              <h2 className="text-xl font-bold text-[var(--dp-color-ink)]">
+              <h2 className="text-xl font-black text-slate-900">
                 Host a Battle Room
               </h2>
-              <p className="text-sm text-[var(--dp-color-ink-secondary)] mt-1.5 leading-relaxed">
+              <p className="text-xs sm:text-sm text-slate-500 mt-1.5 leading-relaxed font-medium">
                 Create a private 6-digit match code and share it with your friend.
               </p>
             </div>
@@ -169,23 +167,23 @@ export const BattleLobbyScreen: React.FC<BattleLobbyScreenProps> = ({ onStartGam
               type="button"
               disabled={loading}
               onClick={handleCreateRoom}
-              className="clay-btn-primary w-full py-3.5 text-base font-bold flex items-center justify-center gap-2 clay-focus cursor-pointer shadow-md disabled:opacity-50"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white w-full py-3.5 rounded-full text-base font-bold flex items-center justify-center gap-2 shadow-sm hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer disabled:opacity-50"
             >
               <span>{loading ? 'Creating...' : 'Create Battle Room'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
 
-          {/* Join Room Clay Card */}
-          <div className="clay-tray-cream p-7 sm:p-8 rounded-3xl flex flex-col justify-between space-y-6">
+          {/* Join Room Card */}
+          <div className="bg-white border border-slate-200/80 shadow-[0_8px_24px_rgba(0,0,0,0.02)] p-7 sm:p-8 rounded-3xl flex flex-col justify-between space-y-6">
             <div>
-              <div className="w-12 h-12 rounded-2xl bg-[var(--dp-color-surface-support)] flex items-center justify-center shadow-xs mb-4">
-                <Users className="w-6 h-6 text-[#2B2540]" />
+              <div className="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center shadow-xs mb-4">
+                <Users className="w-7 h-7 text-emerald-600" />
               </div>
-              <h2 className="text-xl font-bold text-[var(--dp-color-ink)]">
+              <h2 className="text-xl font-black text-slate-900">
                 Join with Room Code
               </h2>
-              <p className="text-sm text-[var(--dp-color-ink-secondary)] mt-1.5 leading-relaxed">
+              <p className="text-xs sm:text-sm text-slate-500 mt-1.5 leading-relaxed font-medium">
                 Enter the 6-character room code from your opponent to jump into their lobby.
               </p>
             </div>
@@ -197,13 +195,13 @@ export const BattleLobbyScreen: React.FC<BattleLobbyScreenProps> = ({ onStartGam
                 value={joinCodeInput}
                 onChange={(e) => setJoinCodeInput(e.target.value.toUpperCase())}
                 placeholder="ENTER CODE (E.G. X7K9P2)"
-                className="w-full h-12 rounded-full bg-[#EEF0FB] px-5 text-center font-mono tracking-widest text-base font-bold text-[var(--dp-color-ink)] uppercase placeholder-[var(--dp-color-ink-secondary)]/50 focus:outline-none clay-focus shadow-[inset_2px_2px_4px_rgba(56,49,90,0.12)]"
+                className="w-full h-12 rounded-full bg-slate-50 border border-slate-200 px-5 text-center font-mono tracking-widest text-base font-black text-slate-900 uppercase placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
 
               <button
                 type="submit"
                 disabled={loading || joinCodeInput.length < 4}
-                className="clay-btn-secondary w-full py-3.5 text-base font-bold flex items-center justify-center gap-2 clay-focus cursor-pointer disabled:opacity-50"
+                className="bg-slate-100 hover:bg-slate-200 text-slate-800 w-full py-3.5 rounded-full text-base font-bold flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
               >
                 <span>{loading ? 'Joining...' : 'Enter Battle Room'}</span>
                 <ArrowRight className="w-4 h-4" />
@@ -214,7 +212,7 @@ export const BattleLobbyScreen: React.FC<BattleLobbyScreenProps> = ({ onStartGam
         </div>
       ) : (
         /* Active Waiting Lobby */
-        <div className="clay-tray-cream p-8 sm:p-10 rounded-3xl space-y-6">
+        <div className="bg-white border border-slate-200/80 shadow-[0_12px_36px_rgba(0,0,0,0.03)] p-8 sm:p-10 rounded-3xl space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#38315A]/10">
             <div>
               <span className="text-xs font-bold uppercase tracking-wider text-[var(--dp-color-ink-secondary)] block">

@@ -30,18 +30,18 @@
 }
 
 :root {
-  /* Learnify Clay Authoritative Tokens */
-  --dp-color-ground: #EEF0FB;
-  --dp-color-ink: #2B2540;
-  --dp-color-ink-secondary: #433C5C;
-  --dp-color-accent: #B8A7F9;
-  --dp-color-primary-action: #4A3FD1;
-  --dp-color-surface: #FFFDF7;
-  --dp-color-surface-support: #BFEFD9;
-  --dp-color-surface-compare: #F8CFE3;
-  --dp-color-surface-warm: #FFE29A;
-  --dp-color-surface-cool: #C9E4FB;
-  --dp-color-focus: #4A3FD1;
+  /* Learnify Clean & Tactile Modern Tokens */
+  --dp-color-ground: #F6F8FD;
+  --dp-color-ink: #1E1B4B;
+  --dp-color-ink-secondary: #475569;
+  --dp-color-accent: #EDE9FE;
+  --dp-color-primary-action: #4F46E5;
+  --dp-color-surface: #FFFFFF;
+  --dp-color-surface-support: #ECFDF5;
+  --dp-color-surface-compare: #FFF1F2;
+  --dp-color-surface-warm: #FFFBEB;
+  --dp-color-surface-cool: #EFF6FF;
+  --dp-color-focus: #4F46E5;
 
   --dp-typography-face: "Learnify Instrument", "Instrument Sans", sans-serif;
   --dp-typography-body: 16px;
@@ -55,25 +55,25 @@
   --dp-spacing-gap-compact: 20px;
   --dp-spacing-paragraph-gap: 18px;
 
-  --dp-radius-surface: 38px;
-  --dp-radius-tray: 70px;
+  --dp-radius-surface: 24px;
+  --dp-radius-tray: 28px;
   --dp-radius-control: 999px;
-  --dp-radius-disclosure: 25px;
+  --dp-radius-disclosure: 20px;
 
   --dp-border-focus-width: 3px;
   --dp-motion-interaction: 180ms;
 
-  /* Authoritative Learnify Clay Shadow Recipe (Upper-left light direction) */
-  --clay-shadow-cushion: 16px 20px 36px rgba(56, 49, 90, 0.16), inset 8px 8px 16px rgba(255, 255, 255, 0.8), inset -10px -10px 20px rgba(88, 70, 160, 0.16);
-  --clay-shadow-recessed: inset 6px 6px 12px rgba(56, 49, 90, 0.18), inset -6px -6px 12px rgba(255, 255, 255, 0.8);
-  --clay-shadow-cream-tray: 18px 24px 44px rgba(56, 49, 90, 0.11), inset 8px 8px 16px rgba(255, 255, 255, 0.95), inset -8px -8px 16px rgba(180, 170, 210, 0.15);
-  --clay-shadow-cream-cushion: 14px 18px 32px rgba(56, 49, 90, 0.11), inset 6px 6px 14px rgba(255, 255, 255, 0.95), inset -6px -6px 14px rgba(180, 170, 210, 0.15);
-  --clay-shadow-primary-btn: 6px 10px 22px rgba(74, 63, 209, 0.35), inset 3px 3px 6px rgba(255, 255, 255, 0.45), inset -4px -4px 8px rgba(35, 28, 120, 0.3);
-  --clay-shadow-secondary-btn: 6px 10px 20px rgba(56, 49, 90, 0.12), inset 3px 3px 6px rgba(255, 255, 255, 0.95), inset -3px -3px 6px rgba(180, 170, 210, 0.18);
-  --clay-shadow-mint: 14px 18px 30px rgba(56, 49, 90, 0.12), inset 6px 6px 14px rgba(255, 255, 255, 0.9), inset -8px -8px 16px rgba(100, 180, 140, 0.22);
-  --clay-shadow-blue: 14px 18px 30px rgba(56, 49, 90, 0.12), inset 6px 6px 14px rgba(255, 255, 255, 0.9), inset -8px -8px 16px rgba(80, 130, 200, 0.22);
-  --clay-shadow-yellow: 14px 18px 30px rgba(56, 49, 90, 0.12), inset 6px 6px 14px rgba(255, 255, 255, 0.9), inset -8px -8px 16px rgba(210, 160, 60, 0.22);
-  --clay-shadow-pink: 16px 20px 36px rgba(56, 49, 90, 0.14), inset 8px 8px 16px rgba(255, 255, 255, 0.9), inset -10px -10px 20px rgba(190, 110, 150, 0.18);
+  /* Crisp, Modern Clean Tactile Shadows */
+  --clay-shadow-cushion: 0 10px 30px -5px rgba(79, 70, 229, 0.12), 0 2px 8px rgba(0, 0, 0, 0.02), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --clay-shadow-recessed: inset 2px 2px 6px rgba(79, 70, 229, 0.08), inset -2px -2px 6px rgba(255, 255, 255, 0.9);
+  --clay-shadow-cream-tray: 0 8px 30px -4px rgba(79, 70, 229, 0.08), 0 2px 6px rgba(0, 0, 0, 0.02), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  --clay-shadow-cream-cushion: 0 6px 20px -3px rgba(79, 70, 229, 0.07), 0 2px 4px rgba(0, 0, 0, 0.02), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  --clay-shadow-primary-btn: 0 8px 20px -4px rgba(79, 70, 229, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  --clay-shadow-secondary-btn: 0 4px 14px rgba(79, 70, 229, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  --clay-shadow-mint: 0 8px 24px -4px rgba(16, 185, 129, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  --clay-shadow-blue: 0 8px 24px -4px rgba(59, 130, 246, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  --clay-shadow-yellow: 0 8px 24px -4px rgba(245, 158, 11, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  --clay-shadow-pink: 0 8px 24px -4px rgba(244, 63, 94, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.95);
 
 }
 
@@ -114,43 +114,50 @@
 }
 
 .clay-cushion-violet {
-  background-color: var(--dp-color-accent);
+  background: linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%);
+  border: 1px solid rgba(139, 92, 246, 0.2);
   border-radius: var(--dp-radius-surface);
   box-shadow: var(--clay-shadow-cushion);
 }
 
 .clay-tray-cream {
   background-color: var(--dp-color-surface);
+  border: 1px solid rgba(226, 232, 240, 0.85);
   border-radius: var(--dp-radius-tray);
   box-shadow: var(--clay-shadow-cream-tray);
 }
 
 .clay-cushion-cream {
   background-color: var(--dp-color-surface);
+  border: 1px solid rgba(226, 232, 240, 0.85);
   border-radius: var(--dp-radius-surface);
   box-shadow: var(--clay-shadow-cream-cushion);
 }
 
 .clay-cushion-mint {
-  background-color: var(--dp-color-surface-support);
+  background: linear-gradient(135deg, #F0FDF4 0%, #ECFDF5 100%);
+  border: 1px solid rgba(16, 185, 129, 0.2);
   border-radius: var(--dp-radius-surface);
   box-shadow: var(--clay-shadow-mint);
 }
 
 .clay-cushion-yellow {
-  background-color: var(--dp-color-surface-warm);
+  background: linear-gradient(135deg, #FFFDF0 0%, #FFFBEB 100%);
+  border: 1px solid rgba(245, 158, 11, 0.2);
   border-radius: var(--dp-radius-surface);
   box-shadow: var(--clay-shadow-yellow);
 }
 
 .clay-cushion-blue {
-  background-color: var(--dp-color-surface-cool);
+  background: linear-gradient(135deg, #F0F7FF 0%, #EFF6FF 100%);
+  border: 1px solid rgba(59, 130, 246, 0.2);
   border-radius: var(--dp-radius-surface);
   box-shadow: var(--clay-shadow-blue);
 }
 
 .clay-tray-pink {
-  background-color: var(--dp-color-surface-compare);
+  background: linear-gradient(135deg, #FFF1F2 0%, #FFE4E6 100%);
+  border: 1px solid rgba(244, 63, 94, 0.2);
   border-radius: var(--dp-radius-tray);
   box-shadow: var(--clay-shadow-pink);
 }

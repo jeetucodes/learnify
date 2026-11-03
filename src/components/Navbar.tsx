@@ -1,6 +1,7 @@
 import React from 'react';
-import { Flame, Zap, User, BookOpen, Sparkles, Swords, RotateCcw } from 'lucide-react';
+import { User, BookOpen, Sparkles, Swords, RotateCcw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { SugaryFlame, SugaryBolt, SugaryBook } from './SugaryIcons';
 
 interface NavbarProps {
   onNavigate: (route: string) => void;
@@ -19,25 +20,25 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentRoute }) => {
   ];
 
   return (
-    <header className="sticky top-0 z-40 w-full backdrop-blur-md bg-[#FFFDF7]/90 border-b border-[#38315A]/[0.08] shadow-[0_4px_16px_rgba(56,49,90,0.06)] px-4 sm:px-6 py-2.5 select-none pt-[env(safe-area-inset-top,0px)]">
+    <header className="sticky top-0 z-40 w-full backdrop-blur-xl bg-white/85 border-b border-indigo-100/60 shadow-[0_2px_12px_rgba(79,70,229,0.04)] px-4 sm:px-6 py-2.5 select-none pt-[env(safe-area-inset-top,0px)] transition-all">
       <div className="max-w-6xl mx-auto flex items-center justify-between gap-3">
         
         {/* Brand & Tagline */}
         <div
           onClick={() => onNavigate('home')}
-          className="flex items-center gap-3 cursor-pointer group clay-focus rounded-full p-1"
+          className="flex items-center gap-2.5 cursor-pointer group rounded-full p-1 transition-transform hover:scale-[1.02]"
         >
-          {/* Logo Badge */}
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--dp-color-accent)] shadow-[inset_2px_2px_4px_rgba(255,255,255,0.8),inset_-2px_-2px_4px_rgba(56,49,90,0.12)]">
-            <span className="font-extrabold text-sm text-[var(--dp-color-ink)]">LF</span>
+          {/* 3D Sugary Brand Icon */}
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-50 to-indigo-100/80 border border-indigo-200/60 shadow-xs">
+            <SugaryBook size={26} />
           </div>
 
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="text-xl font-bold tracking-tight text-[var(--dp-color-ink)] group-hover:text-[var(--dp-color-primary-action)] transition-colors">
+              <span className="text-xl font-extrabold tracking-tight text-[var(--dp-color-ink)] group-hover:text-[var(--dp-color-primary-action)] transition-colors">
                 Learnify
               </span>
-              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[var(--dp-color-surface-support)] text-[var(--dp-color-ink)] shadow-xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200/60 shadow-xs">
                 Prep
               </span>
             </div>
@@ -47,8 +48,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentRoute }) => {
           </div>
         </div>
 
-        {/* Desktop Bank of Raised Clay Pill Navigation */}
-        <nav className="hidden md:flex items-center gap-1.5 p-1 rounded-full bg-[#EEF0FB] shadow-[inset_2px_2px_5px_rgba(56,49,90,0.12),inset_-2px_-2px_5px_rgba(255,255,255,0.9)]">
+        {/* Desktop Bank of Modern Clean Navigation Pills */}
+        <nav className="hidden md:flex items-center gap-1 p-1 rounded-full bg-slate-100/90 border border-slate-200/60 shadow-inner">
           {navItems.map((item) => {
             const isActive = currentRoute === item.id;
             const Icon = item.icon;
@@ -57,13 +58,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentRoute }) => {
                 key={item.id}
                 type="button"
                 onClick={() => onNavigate(item.id)}
-                className={`px-4 py-2 text-sm font-bold flex items-center gap-2 rounded-full transition-all duration-180 cursor-pointer clay-focus ${
+                className={`px-3.5 py-1.5 text-xs font-bold flex items-center gap-1.5 rounded-full transition-all duration-180 cursor-pointer ${
                   isActive
-                    ? 'clay-btn-primary shadow-[0_4px_12px_rgba(74,63,209,0.35)]'
-                    : 'text-[var(--dp-color-ink)] hover:bg-[#FFFDF7] hover:shadow-xs'
+                    ? 'bg-white text-indigo-700 shadow-sm border border-indigo-100/80 font-extrabold'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
                 }`}
               >
-                {Icon && <Icon className="w-4 h-4" />}
+                {Icon && <Icon className="w-3.5 h-3.5" />}
                 <span>{item.label}</span>
               </button>
             );
@@ -71,46 +72,46 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentRoute }) => {
         </nav>
 
         {/* Right Status / Telemetry (Streak, XP & Profile) */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
           {user ? (
             <div className="flex items-center gap-2">
               
-              {/* Streak Pill (Butter-Yellow) */}
+              {/* 3D Sugary Streak Pill */}
               <div
-                className="clay-cushion-yellow px-3 py-1.5 rounded-full flex items-center gap-1.5 text-xs font-bold text-[var(--dp-color-ink)] cursor-default"
+                className="bg-amber-50/90 border border-amber-200/80 px-3 py-1.5 rounded-full flex items-center gap-1.5 text-xs font-bold text-amber-900 shadow-xs cursor-default"
                 title={`${user.streak} Day Continuous Streak`}
               >
-                <Flame className="w-4 h-4 text-[#D97706] fill-[#D97706]" />
-                <span className="font-mono tabular-nums">{user.streak}d</span>
+                <SugaryFlame size={18} />
+                <span className="font-mono tabular-nums font-extrabold">{user.streak}d</span>
               </div>
 
-              {/* XP Pill (Cream Cushion) */}
+              {/* 3D Sugary XP Pill */}
               <div
-                className="clay-cushion-cream px-3 py-1.5 rounded-full flex items-center gap-1.5 text-xs font-bold text-[var(--dp-color-ink)] cursor-default hidden sm:flex"
+                className="bg-indigo-50/90 border border-indigo-200/80 px-3 py-1.5 rounded-full flex items-center gap-1.5 text-xs font-bold text-indigo-900 shadow-xs cursor-default hidden sm:flex"
                 title={`${user.xp} Total Experience`}
               >
-                <Zap className="w-4 h-4 text-[var(--dp-color-primary-action)]" />
-                <span className="font-mono tabular-nums font-bold">{user.xp}</span>
-                <span className="text-[10px] text-[var(--dp-color-ink-secondary)]">XP</span>
+                <SugaryBolt size={18} />
+                <span className="font-mono tabular-nums font-extrabold">{user.xp}</span>
+                <span className="text-[10px] text-indigo-600 font-semibold">XP</span>
               </div>
 
-              {/* Profile Avatar Clay Button */}
+              {/* Profile Avatar Button */}
               <button
                 type="button"
                 onClick={() => onNavigate('profile')}
-                className={`clay-btn-secondary px-3 py-1.5 rounded-full flex items-center gap-2 text-xs font-bold clay-focus cursor-pointer ${
-                  currentRoute === 'profile' ? 'ring-2 ring-[var(--dp-color-primary-action)]' : ''
+                className={`bg-white border border-slate-200/80 hover:border-indigo-300 px-3 py-1.5 rounded-full flex items-center gap-2 text-xs font-bold transition-all shadow-xs cursor-pointer ${
+                  currentRoute === 'profile' ? 'ring-2 ring-indigo-500 border-transparent' : ''
                 }`}
                 title="Student Profile"
               >
-                <div className="w-6 h-6 rounded-full bg-[var(--dp-color-primary-action)] text-[#FFFDF7] flex items-center justify-center text-xs font-bold overflow-hidden shadow-xs">
+                <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-indigo-600 to-violet-500 text-white flex items-center justify-center text-xs font-bold overflow-hidden shadow-xs">
                   {user.avatar_url ? (
                     <img src={user.avatar_url} alt={user.name} className="w-full h-full object-cover" />
                   ) : (
                     user.name.charAt(0).toUpperCase()
                   )}
                 </div>
-                <span className="hidden sm:inline max-w-[80px] truncate text-[var(--dp-color-ink)]">
+                <span className="hidden sm:inline max-w-[80px] truncate text-slate-800 font-bold">
                   {user.name.split(' ')[0]}
                 </span>
               </button>

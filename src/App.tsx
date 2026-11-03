@@ -172,17 +172,17 @@ function MainLayout() {
         )}
       </main>
 
-      {/* Modernized Clean Cream Footer */}
-      <footer className="mt-8 bg-[#FFFDF7] border-t border-[#38315A]/[0.08] px-4 py-4 text-xs text-[var(--dp-color-ink-secondary)] pb-[max(1.25rem,env(safe-area-inset-bottom,1.25rem))]">
+      {/* Modernized Clean Footer */}
+      <footer className="mt-8 bg-white border-t border-slate-200/80 px-4 py-5 text-xs text-slate-500 pb-[max(1.25rem,env(safe-area-inset-bottom,1.25rem))]">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className="font-bold text-sm text-[var(--dp-color-ink)]">Learnify</span>
+            <span className="font-extrabold text-sm text-slate-900">Learnify</span>
             <span>·</span>
             <span>Practice. Compete. Revise.</span>
           </div>
-          <div className="flex items-center gap-4 text-xs">
+          <div className="flex items-center gap-4 text-xs font-medium">
             <span>DBMS Relational Console</span>
-            <span>&copy; 2026 Learnify</span>
+            <span>&copy; 2026 Learnify · Gamified Exam Prep</span>
           </div>
         </div>
       </footer>

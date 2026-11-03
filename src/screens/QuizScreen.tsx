@@ -3,9 +3,6 @@ import {
   Flag,
   ArrowRight,
   HelpCircle,
-  Zap,
-  Check,
-  X,
   Sparkles,
   BookOpen,
 } from 'lucide-react';
@@ -16,6 +13,7 @@ import {
   flagQuestion,
 } from '../lib/storage';
 import { ProgressBar } from '../components/ProgressBar';
+import { SugaryBolt, SugaryCheck, SugaryAlert } from '../components/SugaryIcons';
 import type { Question } from '../types/database';
 
 interface QuizScreenProps {
@@ -153,55 +151,55 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({
   const letters = ['A', 'B', 'C', 'D'];
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6 pb-20 text-left">
+    <div className="max-w-3xl mx-auto space-y-5 pb-20 text-left">
       
       {/* Top Header Controls Bar */}
-      <div className="clay-cushion-cream p-4 rounded-3xl flex items-center justify-between gap-3">
+      <div className="bg-white border border-slate-200/80 shadow-xs p-4 rounded-3xl flex items-center justify-between gap-3">
         <button
           type="button"
           onClick={onExit}
-          className="clay-btn-secondary px-4 py-1.5 text-xs font-bold clay-focus cursor-pointer"
+          className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer"
         >
           ✕ Exit Quiz
         </button>
 
-        <span className="text-sm font-bold text-[var(--dp-color-ink)] max-w-[200px] sm:max-w-xs truncate">
+        <span className="text-sm font-extrabold text-slate-900 max-w-[200px] sm:max-w-xs truncate">
           {topicTitle || 'Practice Session'}
         </span>
 
-        <div className="clay-cushion-yellow px-3.5 py-1.5 rounded-full flex items-center gap-1.5 text-xs font-bold text-[var(--dp-color-ink)] shadow-xs">
-          <Zap className="w-3.5 h-3.5 text-[#D97706]" />
-          <span className="font-mono tabular-nums font-extrabold">+{totalXpEarned} XP</span>
+        <div className="bg-amber-50 border border-amber-200/80 px-3.5 py-1.5 rounded-full flex items-center gap-1.5 text-xs font-extrabold text-amber-900 shadow-xs">
+          <SugaryBolt size={18} />
+          <span className="font-mono tabular-nums">+{totalXpEarned} XP</span>
         </div>
       </div>
 
       {/* Progress & Question Counter */}
-      <div className="clay-tray-cream p-5 rounded-3xl space-y-2.5">
-        <div className="flex justify-between items-center text-xs font-bold text-[var(--dp-color-ink)]">
-          <span className="font-mono tabular-nums">
+      <div className="bg-white border border-slate-200/80 shadow-xs p-5 rounded-3xl space-y-2.5">
+        <div className="flex justify-between items-center text-xs font-bold text-slate-700">
+          <span className="font-mono tabular-nums font-extrabold">
             Question {currentIndex + 1} of {questions.length}
           </span>
-          <span className="font-mono tabular-nums text-[var(--dp-color-primary-action)]">
+          <span className="font-mono tabular-nums text-indigo-600 font-extrabold">
             Score: {score} Correct
           </span>
         </div>
         <ProgressBar progress={progressPercent} heightClass="h-2.5" />
       </div>
 
-      {/* Question Card in Cream Tray */}
-      <div className="clay-tray-cream p-6 sm:p-10 rounded-3xl space-y-6 relative">
+      {/* Question Card */}
+      <div className="bg-white border border-slate-200/80 shadow-[0_10px_30px_rgba(0,0,0,0.03)] p-6 sm:p-9 rounded-3xl space-y-6 relative">
         
         {/* Source metadata & Flag action */}
-        <div className="flex items-center justify-between pb-3 border-b border-[#38315A]/[0.08]">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#EEF0FB] text-[var(--dp-color-ink)]">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-slate-100 text-slate-700">
             {currentQ.source === 'pyq' ? (
               <>
-                <BookOpen className="w-3.5 h-3.5 text-[var(--dp-color-primary-action)]" />
+                <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
                 <span>Past Exam Question (PYQ)</span>
               </>
             ) : (
               <>
-                <Sparkles className="w-3.5 h-3.5 text-[#D97706]" />
+                <Sparkles className="w-3.5 h-3.5 text-amber-600" />
                 <span>AI Generated MCQ</span>
               </>
             )}
@@ -211,10 +209,10 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({
             type="button"
             onClick={handleFlag}
             disabled={flagged}
-            className={`inline-flex items-center gap-1.5 text-xs font-bold transition px-3 py-1 rounded-full clay-focus ${
+            className={`inline-flex items-center gap-1.5 text-xs font-bold transition px-3 py-1 rounded-full ${
               flagged
-                ? 'bg-[var(--dp-color-surface-compare)] text-[var(--dp-color-ink)]'
-                : 'text-[var(--dp-color-ink-secondary)] hover:text-[#E11D48] hover:bg-[#EEF0FB]'
+                ? 'bg-rose-50 text-rose-800 border border-rose-200'
+                : 'text-slate-400 hover:text-rose-600 hover:bg-slate-50'
             }`}
             title="Report inaccurate question"
           >
@@ -224,25 +222,25 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({
         </div>
 
         {/* Question Text */}
-        <h2 className="text-xl sm:text-2xl font-bold text-[var(--dp-color-ink)] leading-snug">
+        <h2 className="text-xl sm:text-2xl font-black text-slate-900 leading-snug">
           {currentQ.question}
         </h2>
 
-        {/* Option Tiles as Tactile Clay Buttons */}
+        {/* Option Tiles */}
         <div className="space-y-3 pt-2">
           {currentQ.options.map((option, idx) => {
             const isSelected = selectedOption === idx;
             const isCorrectAnswer = idx === currentQ.answer_index;
 
-            let tileStyle = 'clay-cushion-cream text-[var(--dp-color-ink)] hover:-translate-y-0.5';
+            let tileStyle = 'bg-white hover:bg-slate-50/80 border border-slate-200/90 text-slate-800 hover:-translate-y-0.5 shadow-xs';
 
             if (isAnswered) {
               if (isCorrectAnswer) {
-                tileStyle = 'clay-cushion-mint border-2 border-[#10B981] font-bold text-[var(--dp-color-ink)]';
+                tileStyle = 'bg-emerald-50/90 border-2 border-emerald-500 font-bold text-emerald-950 shadow-xs';
               } else if (isSelected) {
-                tileStyle = 'clay-tray-pink border-2 border-[#E11D48] font-bold text-[var(--dp-color-ink)]';
+                tileStyle = 'bg-rose-50/90 border-2 border-rose-500 font-bold text-rose-950 shadow-xs';
               } else {
-                tileStyle = 'opacity-60 bg-[#EEF0FB] text-[var(--dp-color-ink-secondary)]';
+                tileStyle = 'opacity-50 bg-slate-50 border border-slate-200 text-slate-500';
               }
             }
 
@@ -252,10 +250,10 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({
                 type="button"
                 disabled={isAnswered}
                 onClick={() => handleSelectOption(idx)}
-                className={`w-full p-4 sm:p-5 rounded-2xl flex items-center justify-between text-left transition-all duration-180 clay-focus ${tileStyle} cursor-pointer`}
+                className={`w-full p-4 sm:p-5 rounded-2xl flex items-center justify-between text-left transition-all duration-180 ${tileStyle} cursor-pointer`}
               >
                 <div className="flex items-center gap-3.5 pr-3">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#FFFDF7] font-mono font-bold text-sm text-[var(--dp-color-ink)] shadow-xs">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-100 font-mono font-black text-sm text-slate-700 shadow-xs">
                     {letters[idx] || idx + 1}
                   </span>
                   <span className="text-base font-semibold leading-relaxed">
@@ -266,13 +264,13 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({
                 {isAnswered && (
                   <div className="shrink-0">
                     {isCorrectAnswer ? (
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-[#065F46] bg-[#FFFDF7] px-2.5 py-1 rounded-full shadow-xs">
-                        <Check className="w-4 h-4 text-[#059669]" />
+                      <div className="flex items-center gap-1.5 text-xs font-extrabold text-emerald-800 bg-white px-2.5 py-1 rounded-full shadow-xs border border-emerald-200">
+                        <SugaryCheck size={16} />
                         <span>Correct +10 XP</span>
                       </div>
                     ) : isSelected ? (
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-[#9F1239] bg-[#FFFDF7] px-2.5 py-1 rounded-full shadow-xs">
-                        <X className="w-4 h-4 text-[#E11D48]" />
+                      <div className="flex items-center gap-1.5 text-xs font-extrabold text-rose-800 bg-white px-2.5 py-1 rounded-full shadow-xs border border-rose-200">
+                        <SugaryAlert size={16} />
                         <span>Incorrect</span>
                       </div>
                     ) : null}
@@ -285,24 +283,24 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({
 
         {/* Explanation & Next Step Drawer */}
         {isAnswered && (
-          <div className="clay-cushion-blue p-5 sm:p-6 rounded-2xl space-y-4 pt-4 border border-[#C9E4FB]">
+          <div className="bg-indigo-50/70 border border-indigo-100 p-5 sm:p-6 rounded-2xl space-y-4 pt-4">
             <div className="flex items-start gap-3">
-              <HelpCircle className="w-5 h-5 text-[var(--dp-color-primary-action)] shrink-0 mt-0.5" />
+              <HelpCircle className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
               <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-[var(--dp-color-ink-secondary)] block">
+                <span className="text-xs font-extrabold uppercase tracking-wider text-indigo-800 block">
                   Concept Rationale
                 </span>
-                <p className="text-sm text-[var(--dp-color-ink)] mt-1 leading-relaxed">
+                <p className="text-sm text-slate-700 mt-1 leading-relaxed font-medium">
                   {currentQ.explanation}
                 </p>
               </div>
             </div>
 
-            <div className="flex justify-end pt-2 border-t border-[#38315A]/10">
+            <div className="flex justify-end pt-2 border-t border-indigo-100/80">
               <button
                 type="button"
                 onClick={handleNext}
-                className="clay-btn-primary px-8 py-3 text-sm font-bold flex items-center gap-2 clay-focus cursor-pointer shadow-md"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-7 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 shadow-sm hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer"
               >
                 <span>{currentIndex + 1 < questions.length ? 'Next Question' : 'Complete Quiz'}</span>
                 <ArrowRight className="w-4 h-4" />

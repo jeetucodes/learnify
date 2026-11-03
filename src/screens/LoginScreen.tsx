@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Mail, Lock, User, ArrowRight, Sparkles } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { SugaryBook, SugarySparkles } from '../components/SugaryIcons';
 
 interface LoginScreenProps {
   onSuccess: () => void;
@@ -56,31 +57,34 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess }) => {
   };
 
   return (
-    <div className="min-h-[80vh] flex flex-col justify-center items-center px-4 py-8 font-clay">
+    <div className="min-h-[80vh] flex flex-col justify-center items-center px-4 py-8">
       <div className="w-full max-w-md">
         
-        {/* Main Clay Card in Cream Tray */}
-        <div className="clay-tray-cream p-7 sm:p-10 rounded-3xl space-y-6 text-center">
+        {/* Main Card */}
+        <div className="bg-white border border-slate-200/80 shadow-[0_12px_40px_rgba(79,70,229,0.08)] p-7 sm:p-9 rounded-3xl space-y-6 text-center">
           
-          {/* Header Brand Cushion */}
-          <div className="clay-cushion-violet p-6 rounded-2xl space-y-1">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-[var(--dp-color-ink)]">
+          {/* Header Brand */}
+          <div className="flex flex-col items-center space-y-2">
+            <div className="w-16 h-16 rounded-3xl bg-indigo-50 border border-indigo-100 flex items-center justify-center shadow-xs">
+              <SugaryBook size={38} />
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-black text-slate-900">
               Learnify
             </h1>
-            <p className="text-xs font-semibold text-[var(--dp-color-ink-secondary)]">
+            <p className="text-xs font-semibold text-slate-500">
               Practice · Compete · Revise
             </p>
           </div>
 
           {/* Pill Tab Switcher */}
-          <div className="p-1 rounded-full bg-[#EEF0FB] flex gap-1 shadow-[inset_2px_2px_4px_rgba(56,49,90,0.12)]">
+          <div className="p-1 rounded-full bg-slate-100 flex gap-1 border border-slate-200/60 shadow-inner">
             <button
               type="button"
               onClick={() => { setIsSignUp(false); setError(null); }}
-              className={`flex-1 py-2 text-xs font-bold rounded-full transition-all duration-180 clay-focus cursor-pointer ${
+              className={`flex-1 py-2 text-xs font-bold rounded-full transition-all duration-180 cursor-pointer ${
                 !isSignUp
-                  ? 'clay-btn-primary shadow-xs'
-                  : 'text-[var(--dp-color-ink-secondary)] hover:text-[var(--dp-color-ink)]'
+                  ? 'bg-white text-indigo-700 shadow-sm font-black'
+                  : 'text-slate-500 hover:text-slate-900'
               }`}
             >
               Sign In
@@ -88,10 +92,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess }) => {
             <button
               type="button"
               onClick={() => { setIsSignUp(true); setError(null); }}
-              className={`flex-1 py-2 text-xs font-bold rounded-full transition-all duration-180 clay-focus cursor-pointer ${
+              className={`flex-1 py-2 text-xs font-bold rounded-full transition-all duration-180 cursor-pointer ${
                 isSignUp
-                  ? 'clay-btn-primary shadow-xs'
-                  : 'text-[var(--dp-color-ink-secondary)] hover:text-[var(--dp-color-ink)]'
+                  ? 'bg-white text-indigo-700 shadow-sm font-black'
+                  : 'text-slate-500 hover:text-slate-900'
               }`}
             >
               Create Account
@@ -99,7 +103,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess }) => {
           </div>
 
           {error && (
-            <div className="clay-tray-pink p-3.5 rounded-2xl text-xs font-bold text-[#9F1239] text-left">
+            <div className="bg-rose-50 border border-rose-200 p-3.5 rounded-2xl text-xs font-bold text-rose-800 text-left">
               {error}
             </div>
           )}
@@ -108,29 +112,29 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess }) => {
           <form onSubmit={handleSubmit} className="space-y-4 text-left">
             {isSignUp && (
               <div>
-                <label className="text-xs font-bold text-[var(--dp-color-ink-secondary)] block mb-1.5 pl-1">
+                <label className="text-xs font-bold text-slate-600 block mb-1.5 pl-1">
                   Student Name
                 </label>
                 <div className="relative">
-                  <User className="w-4 h-4 text-[var(--dp-color-ink-secondary)] absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <User className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
                     type="text"
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Enter full name"
-                    className="w-full h-12 rounded-full bg-[#EEF0FB] pl-11 pr-5 text-sm text-[var(--dp-color-ink)] placeholder-[var(--dp-color-ink-secondary)]/50 focus:outline-none clay-focus shadow-[inset_2px_2px_4px_rgba(56,49,90,0.12)]"
+                    className="w-full h-12 rounded-full bg-slate-50 border border-slate-200 pl-11 pr-5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
               </div>
             )}
 
             <div>
-              <label className="text-xs font-bold text-[var(--dp-color-ink-secondary)] block mb-1.5 pl-1">
+              <label className="text-xs font-bold text-slate-600 block mb-1.5 pl-1">
                 Student Email
               </label>
               <div className="relative">
-                <Mail className="w-4 h-4 text-[var(--dp-color-ink-secondary)] absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <Mail className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="email"
                   required
@@ -139,24 +143,24 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess }) => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="student@university.edu"
-                  className="w-full h-12 rounded-full bg-[#EEF0FB] pl-11 pr-5 text-sm text-[var(--dp-color-ink)] placeholder-[var(--dp-color-ink-secondary)]/50 focus:outline-none clay-focus shadow-[inset_2px_2px_4px_rgba(56,49,90,0.12)]"
+                  className="w-full h-12 rounded-full bg-slate-50 border border-slate-200 pl-11 pr-5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
             </div>
 
             <div>
-              <label className="text-xs font-bold text-[var(--dp-color-ink-secondary)] block mb-1.5 pl-1">
+              <label className="text-xs font-bold text-slate-600 block mb-1.5 pl-1">
                 Password
               </label>
               <div className="relative">
-                <Lock className="w-4 h-4 text-[var(--dp-color-ink-secondary)] absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <Lock className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Minimum 6 characters"
-                  className="w-full h-12 rounded-full bg-[#EEF0FB] pl-11 pr-5 text-sm text-[var(--dp-color-ink)] placeholder-[var(--dp-color-ink-secondary)]/50 focus:outline-none clay-focus shadow-[inset_2px_2px_4px_rgba(56,49,90,0.12)]"
+                  className="w-full h-12 rounded-full bg-slate-50 border border-slate-200 pl-11 pr-5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
             </div>
@@ -164,7 +168,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess }) => {
             <button
               type="submit"
               disabled={submitting}
-              className="clay-btn-primary w-full h-12 text-base font-bold flex items-center justify-center gap-2 clay-focus cursor-pointer shadow-md disabled:opacity-50 mt-2"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white w-full h-12 rounded-full text-base font-bold flex items-center justify-center gap-2 shadow-sm hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer disabled:opacity-50 mt-2"
             >
               <span>{submitting ? 'Authenticating...' : isSignUp ? 'Create Student Account' : 'Sign In to Learnify'}</span>
               <ArrowRight className="w-4 h-4" />
@@ -173,8 +177,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess }) => {
 
           {/* Divider */}
           <div className="relative flex items-center justify-center my-4">
-            <div className="w-full border-t border-[#38315A]/10" />
-            <span className="bg-[#FFFDF7] px-3 text-xs font-bold text-[var(--dp-color-ink-secondary)] uppercase tracking-wider absolute">
+            <div className="w-full border-t border-slate-200" />
+            <span className="bg-white px-3 text-xs font-bold text-slate-400 uppercase tracking-wider absolute">
               or
             </span>
           </div>
@@ -184,7 +188,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess }) => {
             <button
               type="button"
               onClick={handleGoogle}
-              className="clay-btn-secondary w-full h-12 text-sm font-bold flex items-center justify-center gap-2.5 clay-focus cursor-pointer"
+              className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 w-full h-12 rounded-full text-sm font-bold flex items-center justify-center gap-2.5 shadow-xs cursor-pointer transition-all"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24">
                 <path
@@ -210,9 +214,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess }) => {
             <button
               type="button"
               onClick={handleGuest}
-              className="w-full py-2.5 text-xs font-bold text-[var(--dp-color-primary-action)] hover:underline clay-focus cursor-pointer flex items-center justify-center gap-1.5"
+              className="w-full py-2.5 text-xs font-bold text-indigo-600 hover:text-indigo-800 cursor-pointer flex items-center justify-center gap-1.5"
             >
-              <Sparkles className="w-3.5 h-3.5" />
+              <SugarySparkles size={16} />
               <span>Explore as Demo Student (Instant Access)</span>
             </button>
           </div>

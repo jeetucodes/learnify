@@ -1,10 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  Crown,
   Medal,
-  CheckCircle2,
-  XCircle,
-  Zap,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -14,6 +10,12 @@ import {
 } from '../lib/storage';
 import { SEED_QUESTIONS } from '../lib/seedData';
 import { triggerConfetti } from '../components/Confetti';
+import {
+  SugaryBolt,
+  SugaryCheck,
+  SugaryAlert,
+  SugaryTrophy,
+} from '../components/SugaryIcons';
 import type { BattleRoom, BattleParticipant, Question } from '../types/database';
 
 interface BattleGameScreenProps {
@@ -151,23 +153,23 @@ export const BattleGameScreen: React.FC<BattleGameScreenProps> = ({
   const isWinner = myParticipant && myParticipant.score >= opponent.score;
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6 pb-20 text-left font-clay">
+    <div className="max-w-3xl mx-auto space-y-6 pb-20 text-left">
       
       {/* Live Duel Split Scoreboard */}
-      <div className="clay-tray-cream p-4 sm:p-6 rounded-3xl">
+      <div className="bg-white border border-slate-200/80 shadow-[0_6px_20px_rgba(0,0,0,0.03)] p-4 sm:p-6 rounded-3xl">
         <div className="grid grid-cols-12 gap-3 items-center">
           
           {/* Player (Left) */}
           <div className="col-span-5 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[var(--dp-color-primary-action)] text-[#FFFDF7] font-bold flex items-center justify-center shrink-0 shadow-xs">
+            <div className="w-10 h-10 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center shrink-0 shadow-xs">
               {user?.name.charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0">
-              <span className="text-xs font-bold text-[var(--dp-color-ink-secondary)] block">YOU</span>
-              <span className="text-sm font-bold text-[var(--dp-color-ink)] truncate block">
+              <span className="text-xs font-black text-indigo-600 block">YOU</span>
+              <span className="text-sm font-bold text-slate-900 truncate block">
                 {user?.name.split(' ')[0]}
               </span>
-              <span className="font-mono text-lg font-extrabold tabular-nums text-[var(--dp-color-primary-action)]">
+              <span className="font-mono text-lg font-black tabular-nums text-indigo-700">
                 {myParticipant?.score || 0} pts
               </span>
             </div>
@@ -176,13 +178,13 @@ export const BattleGameScreen: React.FC<BattleGameScreenProps> = ({
           {/* Center Timer & Round */}
           <div className="col-span-2 flex flex-col items-center justify-center">
             <div
-              className={`w-12 h-12 rounded-full flex items-center justify-center font-mono font-bold text-base shadow-xs ${
-                timeLeft <= 5 ? 'clay-tray-pink text-[#E11D48] animate-pulse' : 'clay-cushion-yellow text-[var(--dp-color-ink)]'
+              className={`w-12 h-12 rounded-full flex items-center justify-center font-mono font-black text-base shadow-xs ${
+                timeLeft <= 5 ? 'bg-rose-50 border border-rose-300 text-rose-600 animate-pulse' : 'bg-amber-50 border border-amber-300 text-amber-800'
               }`}
             >
               {timeLeft}s
             </div>
-            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[var(--dp-color-ink-secondary)] mt-1">
+            <span className="text-[10px] font-mono font-black uppercase tracking-wider text-slate-400 mt-1">
               Q {currentQIndex + 1}/{questions.length}
             </span>
           </div>
@@ -190,15 +192,15 @@ export const BattleGameScreen: React.FC<BattleGameScreenProps> = ({
           {/* Opponent (Right) */}
           <div className="col-span-5 flex items-center justify-end gap-3 text-right">
             <div className="min-w-0">
-              <span className="text-xs font-bold text-[var(--dp-color-ink-secondary)] block">OPPONENT</span>
-              <span className="text-sm font-bold text-[var(--dp-color-ink)] truncate block">
+              <span className="text-xs font-black text-amber-700 block">OPPONENT</span>
+              <span className="text-sm font-bold text-slate-900 truncate block">
                 {opponent.name}
               </span>
-              <span className="font-mono text-lg font-extrabold tabular-nums text-[#D97706]">
+              <span className="font-mono text-lg font-black tabular-nums text-amber-700">
                 {opponent.score || 0} pts
               </span>
             </div>
-            <div className="w-10 h-10 rounded-full bg-[var(--dp-color-surface-warm)] text-[var(--dp-color-ink)] font-bold flex items-center justify-center shrink-0 shadow-xs">
+            <div className="w-10 h-10 rounded-full bg-amber-500 text-white font-bold flex items-center justify-center shrink-0 shadow-xs">
               {opponent.name.charAt(0).toUpperCase()}
             </div>
           </div>
@@ -206,18 +208,18 @@ export const BattleGameScreen: React.FC<BattleGameScreenProps> = ({
         </div>
       </div>
 
-      {/* Main Question Arena in Cream Tray */}
-      <div className="clay-tray-cream p-6 sm:p-10 rounded-3xl space-y-6 relative">
-        <div className="flex items-center justify-between pb-3 border-b border-[#38315A]/[0.08]">
-          <span className="text-xs font-bold uppercase tracking-wider text-[var(--dp-color-ink-secondary)]">
+      {/* Main Question Arena */}
+      <div className="bg-white border border-slate-200/80 shadow-[0_10px_30px_rgba(0,0,0,0.03)] p-6 sm:p-9 rounded-3xl space-y-6 relative">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <span className="text-xs font-black uppercase tracking-wider text-slate-400">
             Speed Round {currentQIndex + 1} of {questions.length}
           </span>
-          <span className="text-xs font-bold text-[#D97706] flex items-center gap-1">
-            <Zap className="w-3.5 h-3.5 fill-current" /> Fast answers earn time bonus
+          <span className="text-xs font-bold text-amber-700 flex items-center gap-1.5 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full">
+            <SugaryBolt size={14} /> Fast answers earn time bonus
           </span>
         </div>
 
-        <h2 className="text-xl sm:text-2xl font-bold text-[var(--dp-color-ink)] leading-snug">
+        <h2 className="text-xl sm:text-2xl font-black text-slate-900 leading-snug">
           {currentQ.question}
         </h2>
 
@@ -227,15 +229,15 @@ export const BattleGameScreen: React.FC<BattleGameScreenProps> = ({
             const isSelected = selectedOption === idx;
             const isCorrect = idx === currentQ.answer_index;
 
-            let tileStyle = 'clay-cushion-cream text-[var(--dp-color-ink)] hover:-translate-y-0.5';
+            let tileStyle = 'bg-white hover:bg-slate-50 border border-slate-200/80 text-slate-800 hover:-translate-y-0.5 shadow-xs';
 
             if (hasAnswered) {
               if (isCorrect) {
-                tileStyle = 'clay-cushion-mint border-2 border-[#10B981] font-bold';
+                tileStyle = 'bg-emerald-50 border-2 border-emerald-500 font-bold text-emerald-950';
               } else if (isSelected) {
-                tileStyle = 'clay-tray-pink border-2 border-[#E11D48] font-bold';
+                tileStyle = 'bg-rose-50 border-2 border-rose-500 font-bold text-rose-950';
               } else {
-                tileStyle = 'opacity-60 bg-[#EEF0FB]';
+                tileStyle = 'opacity-50 bg-slate-50 border border-slate-200';
               }
             }
 
@@ -245,10 +247,10 @@ export const BattleGameScreen: React.FC<BattleGameScreenProps> = ({
                 type="button"
                 disabled={hasAnswered}
                 onClick={() => handleSelectOption(idx)}
-                className={`w-full p-4 sm:p-5 rounded-2xl flex items-center justify-between text-left transition-all duration-180 clay-focus ${tileStyle} cursor-pointer`}
+                className={`w-full p-4 sm:p-5 rounded-2xl flex items-center justify-between text-left transition-all duration-180 ${tileStyle} cursor-pointer`}
               >
                 <div className="flex items-center gap-3">
-                  <span className="w-8 h-8 rounded-xl bg-[#FFFDF7] font-mono font-bold text-sm flex items-center justify-center text-[var(--dp-color-ink)] shadow-xs">
+                  <span className="w-8 h-8 rounded-xl bg-slate-100 font-mono font-black text-sm flex items-center justify-center text-slate-700 shadow-xs">
                     {String.fromCharCode(65 + idx)}
                   </span>
                   <span className="text-base font-semibold leading-relaxed">
@@ -257,10 +259,10 @@ export const BattleGameScreen: React.FC<BattleGameScreenProps> = ({
                 </div>
 
                 {hasAnswered && isCorrect && (
-                  <CheckCircle2 className="w-5 h-5 text-[#059669] shrink-0" />
+                  <SugaryCheck size={20} className="shrink-0" />
                 )}
                 {hasAnswered && isSelected && !isCorrect && (
-                  <XCircle className="w-5 h-5 text-[#E11D48] shrink-0" />
+                  <SugaryAlert size={20} className="shrink-0" />
                 )}
               </button>
             );
@@ -272,8 +274,8 @@ export const BattleGameScreen: React.FC<BattleGameScreenProps> = ({
           <div
             className={`p-3.5 rounded-2xl text-center text-sm font-bold shadow-xs ${
               answerResult.correct
-                ? 'clay-cushion-mint text-[#065F46]'
-                : 'clay-tray-pink text-[#9F1239]'
+                ? 'bg-emerald-50 border border-emerald-200 text-emerald-900'
+                : 'bg-rose-50 border border-rose-200 text-rose-900'
             }`}
           >
             {answerResult.correct
@@ -285,36 +287,36 @@ export const BattleGameScreen: React.FC<BattleGameScreenProps> = ({
 
       {/* Game Over Modal */}
       {isGameOver && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2B2540]/60 backdrop-blur-sm">
-          <div className="clay-tray-cream p-8 sm:p-10 rounded-3xl max-w-md w-full text-center space-y-6 shadow-2xl">
-            <div className="w-20 h-20 rounded-3xl bg-[var(--dp-color-surface-warm)] flex items-center justify-center mx-auto shadow-md">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+          <div className="bg-white border border-slate-200 shadow-2xl p-8 sm:p-10 rounded-3xl max-w-md w-full text-center space-y-6">
+            <div className="w-20 h-20 rounded-3xl bg-amber-50 border border-amber-200 flex items-center justify-center mx-auto shadow-xs">
               {isWinner ? (
-                <Crown className="w-10 h-10 text-[#D97706]" />
+                <SugaryTrophy size={48} />
               ) : (
-                <Medal className="w-10 h-10 text-[var(--dp-color-ink-secondary)]" />
+                <Medal className="w-10 h-10 text-slate-400" />
               )}
             </div>
 
             <div>
-              <h2 className="text-3xl font-extrabold text-[var(--dp-color-ink)]">
+              <h2 className="text-3xl font-black text-slate-900">
                 {isWinner ? 'Victory Claimed! 🏆' : 'Defeat! Good Fight ⚔️'}
               </h2>
-              <p className="text-sm text-[var(--dp-color-ink-secondary)] mt-1">
+              <p className="text-sm text-slate-500 mt-1">
                 Final match score committed to student battle ranks.
               </p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="clay-cushion-mint p-4 rounded-2xl">
-                <span className="text-xs font-bold text-[var(--dp-color-ink-secondary)]">Your Score</span>
-                <span className="text-2xl font-extrabold font-mono text-[var(--dp-color-ink)] block mt-0.5">
+              <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl">
+                <span className="text-xs font-black text-emerald-800">Your Score</span>
+                <span className="text-2xl font-black font-mono text-slate-900 block mt-0.5">
                   {myParticipant?.score || 0}
                 </span>
               </div>
 
-              <div className="clay-cushion-cream p-4 rounded-2xl">
-                <span className="text-xs font-bold text-[var(--dp-color-ink-secondary)]">Opponent</span>
-                <span className="text-2xl font-extrabold font-mono text-[var(--dp-color-ink)] block mt-0.5">
+              <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl">
+                <span className="text-xs font-black text-slate-500">Opponent</span>
+                <span className="text-2xl font-black font-mono text-slate-900 block mt-0.5">
                   {opponent.score || 0}
                 </span>
               </div>
@@ -323,7 +325,7 @@ export const BattleGameScreen: React.FC<BattleGameScreenProps> = ({
             <button
               type="button"
               onClick={onExit}
-              className="clay-btn-primary w-full py-3.5 text-base font-bold clay-focus cursor-pointer shadow-md"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white w-full py-3.5 rounded-full text-base font-bold shadow-sm cursor-pointer transition-all"
             >
               Return to Battle Lobby
             </button>

@@ -1,9 +1,6 @@
 import React, { useState } from 'react';
 import {
-  Sparkles,
   FileText,
-  CheckCircle2,
-  AlertCircle,
   Play,
   UploadCloud,
 } from 'lucide-react';
@@ -15,6 +12,7 @@ import {
   generateFallbackQuestionsFromText,
   GeneratedQuizSchema,
 } from '../lib/storage';
+import { SugarySparkles, SugaryCheck, SugaryAlert } from '../components/SugaryIcons';
 import type { Question } from '../types/database';
 
 interface UploadNotesScreenProps {
@@ -129,40 +127,40 @@ export const UploadNotesScreen: React.FC<UploadNotesScreenProps> = ({ onStartQui
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6 pb-20 text-left font-clay">
+    <div className="max-w-3xl mx-auto space-y-6 pb-20 text-left">
       
-      {/* Header Banner (Violet Cushion) */}
-      <div className="clay-cushion-violet p-6 sm:p-10 rounded-3xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Header Banner */}
+      <div className="bg-gradient-to-br from-indigo-50/90 via-white to-purple-50/80 border border-indigo-100/90 shadow-[0_8px_24px_rgba(79,70,229,0.06)] p-6 sm:p-10 rounded-3xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="max-w-xl">
-          <div className="inline-flex items-center gap-2 rounded-full bg-[#FFFDF7]/70 px-3.5 py-1 text-xs font-bold text-[var(--dp-color-ink)] mb-3 shadow-xs">
-            <Sparkles className="h-3.5 w-3.5 text-[var(--dp-color-primary-action)]" />
+          <div className="inline-flex items-center gap-2 rounded-full bg-white px-3.5 py-1 text-xs font-bold text-indigo-700 mb-3 border border-indigo-100 shadow-xs">
+            <SugarySparkles size={18} />
             <span>AI Syllabus Synthesis</span>
           </div>
 
-          <h1 className="text-2xl sm:text-4xl font-extrabold text-[var(--dp-color-ink)] leading-tight">
+          <h1 className="text-2xl sm:text-4xl font-black text-slate-900 leading-tight">
             Notes-to-Quiz AI
           </h1>
-          <p className="mt-2 text-sm sm:text-base text-[var(--dp-color-ink-secondary)] leading-relaxed">
+          <p className="mt-2 text-xs sm:text-base text-slate-600 leading-relaxed font-medium">
             Upload your lecture slides or college notes. We extract key concepts and generate 10 syllabus-aligned MCQs with explanations.
           </p>
         </div>
       </div>
 
-      {/* Upload Dropzone in Cream Tray */}
-      <div className="clay-tray-cream p-8 sm:p-10 rounded-3xl space-y-6 text-center">
+      {/* Upload Dropzone */}
+      <div className="bg-white border border-slate-200/80 shadow-[0_12px_36px_rgba(0,0,0,0.03)] p-8 sm:p-10 rounded-3xl space-y-6 text-center">
         
         <label
           htmlFor="pdf-upload"
-          className="clay-recessed-well border-2 border-dashed border-[#4A3FD1]/30 rounded-3xl p-8 sm:p-12 flex flex-col items-center justify-center cursor-pointer hover:border-[var(--dp-color-primary-action)] transition-all bg-[#EEF0FB]/50 group"
+          className="border-2 border-dashed border-indigo-200 hover:border-indigo-400 rounded-3xl p-8 sm:p-12 flex flex-col items-center justify-center cursor-pointer transition-all bg-indigo-50/30 hover:bg-indigo-50/60 group"
         >
-          <div className="w-16 h-16 rounded-3xl bg-[var(--dp-color-surface)] flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform mb-4">
-            <UploadCloud className="w-8 h-8 text-[var(--dp-color-primary-action)]" />
+          <div className="w-16 h-16 rounded-3xl bg-white border border-indigo-100 flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform mb-4">
+            <UploadCloud className="w-8 h-8 text-indigo-600" />
           </div>
 
-          <span className="text-lg font-bold text-[var(--dp-color-ink)]">
+          <span className="text-lg font-bold text-slate-900">
             {file ? file.name : 'Choose PDF or drag & drop'}
           </span>
-          <span className="text-xs text-[var(--dp-color-ink-secondary)] mt-1">
+          <span className="text-xs text-slate-500 mt-1">
             Accepts lecture slides, class handouts, or notes (.pdf up to 10MB)
           </span>
 
@@ -176,14 +174,14 @@ export const UploadNotesScreen: React.FC<UploadNotesScreenProps> = ({ onStartQui
         </label>
 
         {file && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-2xl bg-[#EEF0FB] text-left">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-200 text-left">
             <div className="flex items-center gap-3">
-              <FileText className="w-6 h-6 text-[var(--dp-color-primary-action)]" />
+              <FileText className="w-6 h-6 text-indigo-600" />
               <div>
-                <span className="text-sm font-bold text-[var(--dp-color-ink)] block truncate max-w-xs">
+                <span className="text-sm font-bold text-slate-900 block truncate max-w-xs">
                   {file.name}
                 </span>
-                <span className="text-xs text-[var(--dp-color-ink-secondary)]">
+                <span className="text-xs text-slate-500 font-medium">
                   {(file.size / 1024).toFixed(1)} KB PDF
                 </span>
               </div>
@@ -193,9 +191,9 @@ export const UploadNotesScreen: React.FC<UploadNotesScreenProps> = ({ onStartQui
               type="button"
               disabled={status === 'extracting' || status === 'generating'}
               onClick={handleProcessPdf}
-              className="clay-btn-primary px-6 py-2.5 text-sm font-bold flex items-center gap-2 clay-focus cursor-pointer disabled:opacity-50 w-full sm:w-auto justify-center"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 shadow-sm cursor-pointer disabled:opacity-50 w-full sm:w-auto justify-center transition-all"
             >
-              <Sparkles className="w-4 h-4" />
+              <SugarySparkles size={16} />
               <span>{status === 'extracting' || status === 'generating' ? 'Processing...' : 'Generate 10 MCQs'}</span>
             </button>
           </div>
@@ -206,18 +204,18 @@ export const UploadNotesScreen: React.FC<UploadNotesScreenProps> = ({ onStartQui
           <div
             className={`p-4 rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2.5 ${
               status === 'ready'
-                ? 'clay-cushion-mint text-[var(--dp-color-ink)]'
+                ? 'bg-emerald-50 border border-emerald-200 text-emerald-900'
                 : status === 'error'
-                ? 'clay-tray-pink text-[#9F1239]'
-                : 'clay-cushion-blue text-[var(--dp-color-ink)]'
+                ? 'bg-rose-50 border border-rose-200 text-rose-900'
+                : 'bg-indigo-50 border border-indigo-200 text-indigo-900'
             }`}
           >
             {status === 'ready' ? (
-              <CheckCircle2 className="w-4 h-4 text-[#059669] shrink-0" />
+              <SugaryCheck size={18} className="shrink-0" />
             ) : status === 'error' ? (
-              <AlertCircle className="w-4 h-4 text-[#E11D48] shrink-0" />
+              <SugaryAlert size={18} className="shrink-0" />
             ) : (
-              <div className="w-4 h-4 rounded-full border-2 border-[var(--dp-color-primary-action)] border-t-transparent animate-spin shrink-0" />
+              <div className="w-4 h-4 rounded-full border-2 border-indigo-600 border-t-transparent animate-spin shrink-0" />
             )}
             <span>{statusMessage}</span>
           </div>
@@ -225,12 +223,12 @@ export const UploadNotesScreen: React.FC<UploadNotesScreenProps> = ({ onStartQui
 
         {/* Ready to Play Quiz */}
         {status === 'ready' && generatedQuestions.length > 0 && (
-          <div className="pt-4 border-t border-[#38315A]/10 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="text-left">
-              <span className="text-sm font-bold text-[var(--dp-color-ink)] block">
+              <span className="text-sm font-black text-slate-900 block">
                 {generatedQuestions.length} Questions Ready!
               </span>
-              <span className="text-xs text-[var(--dp-color-ink-secondary)]">
+              <span className="text-xs text-slate-500 font-medium">
                 Syllabus-aligned with answer rationales and explanations.
               </span>
             </div>
@@ -238,7 +236,7 @@ export const UploadNotesScreen: React.FC<UploadNotesScreenProps> = ({ onStartQui
             <button
               type="button"
               onClick={handleStart}
-              className="clay-btn-primary px-8 py-3.5 text-base font-bold flex items-center gap-2 clay-focus cursor-pointer shadow-md w-full sm:w-auto justify-center"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3.5 rounded-full text-base font-bold flex items-center gap-2 shadow-sm cursor-pointer w-full sm:w-auto justify-center transition-all hover:-translate-y-0.5 active:translate-y-0"
             >
               <Play className="w-4 h-4 fill-current" />
               <span>Start AI Quiz Now</span>
