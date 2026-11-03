@@ -72,3 +72,4 @@ export function validatePdfFile(file: File): { valid: boolean; error?: string } 
 
   return { valid: true };
 }
+

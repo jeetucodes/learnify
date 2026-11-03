@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   ArrowRight,
-  Sparkles,
+  Plus,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getTopicMastery } from '../lib/storage';
@@ -95,11 +95,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
           
           <button
             type="button"
-            onClick={() => onNavigate('upload')}
+            onClick={() => onNavigate('create')}
             className="bg-white/90 hover:bg-white text-indigo-900 border border-indigo-200/80 px-6 py-2.5 rounded-full text-sm font-bold flex items-center justify-center gap-2 shadow-xs hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer whitespace-nowrap"
           >
-            <Sparkles className="h-4 w-4 text-indigo-600" />
-            <span>Upload Notes AI</span>
+            <Plus className="h-4 w-4 text-indigo-600" />
+            <span>Create Quiz Studio</span>
           </button>
         </div>
       </div>

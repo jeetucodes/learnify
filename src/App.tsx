@@ -8,7 +8,7 @@ import { PracticeScreen } from './screens/PracticeScreen';
 import { QuizScreen } from './screens/QuizScreen';
 import { ResultsScreen } from './screens/ResultsScreen';
 import { RevisionScreen } from './screens/RevisionScreen';
-import { UploadNotesScreen } from './screens/UploadNotesScreen';
+import { CreateQuizScreen } from './screens/CreateQuizScreen';
 import { BattleLobbyScreen } from './screens/BattleLobbyScreen';
 import { BattleGameScreen } from './screens/BattleGameScreen';
 import { ProfileScreen } from './screens/ProfileScreen';
@@ -124,7 +124,10 @@ function MainLayout() {
             )}
 
             {currentRoute === 'practice' && (
-              <PracticeScreen onStartQuiz={handleStartPracticeQuiz} />
+              <PracticeScreen
+                onStartQuiz={handleStartPracticeQuiz}
+                onNavigate={handleNavigate}
+              />
             )}
 
             {currentRoute === 'quiz' && (
@@ -154,8 +157,8 @@ function MainLayout() {
               />
             )}
 
-            {currentRoute === 'upload' && (
-              <UploadNotesScreen onStartQuiz={handleStartPracticeQuiz} />
+            {(currentRoute === 'upload' || currentRoute === 'create') && (
+              <CreateQuizScreen onStartQuiz={handleStartPracticeQuiz} />
             )}
 
             {currentRoute === 'battle' && (

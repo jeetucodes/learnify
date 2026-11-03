@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, BookOpen, Sparkles, Swords, User } from 'lucide-react';
+import { Home, BookOpen, PlusCircle, Swords, User } from 'lucide-react';
 
 interface BottomNavProps {
   currentRoute: string;
@@ -10,7 +10,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentRoute, onNavigate }
   const tabs = [
     { id: 'home', label: 'Home', icon: Home },
     { id: 'practice', label: 'Practice', icon: BookOpen },
-    { id: 'upload', label: 'Notes AI', icon: Sparkles },
+    { id: 'create', label: 'Create', icon: PlusCircle },
     { id: 'battle', label: 'Battle', icon: Swords },
     { id: 'profile', label: 'Profile', icon: User },
   ];
@@ -20,7 +20,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentRoute, onNavigate }
       <nav className="pointer-events-auto max-w-sm mx-auto rounded-full bg-white/95 backdrop-blur-xl border border-indigo-100/90 shadow-[0_12px_30px_rgba(79,70,229,0.12)] p-1.5 flex items-center justify-around gap-1 select-none">
         {tabs.map((tab) => {
           const Icon = tab.icon;
-          const isActive = currentRoute === tab.id;
+          const isActive =
+            currentRoute === tab.id || (tab.id === 'create' && currentRoute === 'upload');
 
           return (
             <button

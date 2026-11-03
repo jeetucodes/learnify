@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, BookOpen, Sparkles, Swords, RotateCcw } from 'lucide-react';
+import { User, BookOpen, Swords, RotateCcw, PlusCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { SugaryFlame, SugaryBolt } from './SugaryIcons';
 import { LearnifyBrand } from './LearnifyLogo';
@@ -15,7 +15,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentRoute }) => {
   const navItems = [
     { id: 'home', label: 'Dashboard', icon: null },
     { id: 'practice', label: 'Practice', icon: BookOpen },
-    { id: 'upload', label: 'Notes AI', icon: Sparkles },
+    { id: 'create', label: 'Create Quiz', icon: PlusCircle },
     { id: 'revision', label: 'Revision', icon: RotateCcw },
     { id: 'battle', label: 'Battle', icon: Swords },
   ];
@@ -30,7 +30,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentRoute }) => {
         {/* Desktop Bank of Modern Clean Navigation Pills */}
         <nav className="hidden md:flex items-center gap-1 p-1 rounded-full bg-slate-100/90 border border-slate-200/60 shadow-inner">
           {navItems.map((item) => {
-            const isActive = currentRoute === item.id;
+            const isActive =
+              currentRoute === item.id || (item.id === 'create' && currentRoute === 'upload');
             const Icon = item.icon;
             return (
               <button

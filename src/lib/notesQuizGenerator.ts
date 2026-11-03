@@ -407,3 +407,100 @@ function synthesizeQuestionsFromText(
 
   return validatedQuestions.slice(0, targetCount);
 }
+
+export interface GenerateFromPromptParams {
+  topicTitle: string;
+  count?: number;
+  difficulty?: 'easy' | 'medium' | 'hard';
+  subjectContext?: string;
+  topicId?: string;
+}
+
+/**
+ * Generates verified university-grade MCQs directly from a topic prompt or concept description.
+ */
+export async function generateQuestionsFromTopicPrompt(
+  params: GenerateFromPromptParams
+): Promise<Question[]> {
+  const { topicTitle, count = 10, difficulty = 'medium', subjectContext, topicId } = params;
+  const targetCount = Math.min(30, Math.max(3, count));
+
+  const clientGeminiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY;
+  if (clientGeminiKey && clientGeminiKey !== 'your-gemini-api-key') {
+    const model = (import.meta as any).env?.VITE_GEMINI_MODEL || 'gemini-3.5-flash';
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${clientGeminiKey}`;
+
+    const prompt = `You are a world-class university professor${subjectContext ? ` in ${subjectContext}` : ''}.
+Generate exactly ${targetCount} university-grade multiple-choice questions focusing specifically on the topic: "${topicTitle}".
+Target Difficulty: ${difficulty}.
+CRITICAL QUALITY REQUIREMENTS:
+1. Analytical & Scenario-Based: Create thought-provoking questions testing deep theoretical concepts, application, or edge cases.
+2. 4 Plausible Options: Distractors must represent realistic student misconceptions. No throwaways.
+3. Structured Explanation: Every question MUST format "explanation" in markdown with:
+   - 🎯 **Core Concept**: Theoretical proof of why the correct option is right.
+   - ❌ **Option Breakdown**: Concise breakdown of why each distractor is wrong.
+   - 💡 **Exam Takeaway**: Memory tip, mnemonic, or high-yield rule.
+4. Exactly one correct option (answer_index 0 to 3).
+
+Return strictly valid JSON:
+{
+  "questions": [
+    {
+      "question": "string",
+      "options": ["string", "string", "string", "string"],
+      "answer_index": 0,
+      "explanation": "structured markdown string"
+    }
+  ]
+}`;
+
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.3,
+            maxOutputTokens: 3500,
+          },
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (rawText) {
+          const cleaned = rawText.replace(/^```json/im, '').replace(/^```/im, '').replace(/```$/im, '').trim();
+          const parsed = JSON.parse(cleaned);
+          if (parsed?.questions && Array.isArray(parsed.questions)) {
+            const validated: Question[] = [];
+            for (const q of parsed.questions) {
+              const parseRes = QuestionSchema.safeParse(q);
+              if (parseRes.success) {
+                validated.push({
+                  id: safeUUID(),
+                  topic_id: topicId || null,
+                  question: q.question,
+                  options: q.options,
+                  answer_index: q.answer_index,
+                  explanation: q.explanation,
+                  source: 'ai',
+                  flagged: false,
+                  created_at: new Date().toISOString(),
+                });
+              }
+            }
+            if (validated.length > 0) return validated;
+          }
+        }
+      }
+    } catch (geminiErr) {
+      console.warn('Gemini topic prompt generator fallback:', geminiErr);
+    }
+  }
+
+  // Fallback generation based on topic knowledge
+  const fallbackTopicText = `${topicTitle}. Essential principles, operational definitions, key mechanisms, and standard competitive exam problems related to ${topicTitle}.`;
+  return synthesizeQuestionsFromText(fallbackTopicText, targetCount, topicId);
+}

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Play } from 'lucide-react';
+import { Play, Plus, PenTool } from 'lucide-react';
 import { getSubjects, getUnits, getTopics, getTopicMastery } from '../lib/storage';
 import { useAuth } from '../context/AuthContext';
 import { SugaryBook, SugaryCheck, SugaryAlert } from '../components/SugaryIcons';
@@ -7,9 +7,10 @@ import type { Subject, Unit, Topic, TopicMastery } from '../types/database';
 
 interface PracticeScreenProps {
   onStartQuiz: (topicId: string, topicTitle: string) => void;
+  onNavigate?: (route: string) => void;
 }
 
-export const PracticeScreen: React.FC<PracticeScreenProps> = ({ onStartQuiz }) => {
+export const PracticeScreen: React.FC<PracticeScreenProps> = ({ onStartQuiz, onNavigate }) => {
   const { user } = useAuth();
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
   const [units, setUnits] = useState<Unit[]>([]);
@@ -63,6 +64,33 @@ export const PracticeScreen: React.FC<PracticeScreenProps> = ({ onStartQuiz }) =
   return (
     <div className="space-y-6 pb-20">
       
+      {/* Create Custom Quiz Prompt Card */}
+      {onNavigate && (
+        <div className="bg-gradient-to-r from-indigo-50/80 via-white to-purple-50/80 border border-indigo-100 p-4 sm:p-5 rounded-3xl flex flex-col sm:flex-row items-center justify-between gap-4 text-left shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+              <Plus className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="text-sm font-extrabold text-slate-900 block">
+                Want to practice custom questions?
+              </span>
+              <span className="text-xs text-slate-500 font-medium">
+                Create quizzes manually, generate from any AI topic prompt, upload 100MB notes, or paste question banks.
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => onNavigate('create')}
+            className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-5 py-2.5 rounded-full shadow-xs cursor-pointer whitespace-nowrap hover:-translate-y-0.5 active:translate-y-0 transition-transform"
+          >
+            <PenTool className="w-3.5 h-3.5" />
+            <span>Create Quiz Studio</span>
+          </button>
+        </div>
+      )}
+
       {/* Subject Header Banner */}
       {selectedSubject && (
         <div className="bg-gradient-to-br from-indigo-50/90 via-white to-violet-50/80 border border-indigo-100/90 shadow-[0_8px_24px_rgba(79,70,229,0.06)] p-6 sm:p-8 rounded-3xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-left">
