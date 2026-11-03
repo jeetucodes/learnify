@@ -10,11 +10,21 @@ export interface PdfTopicAnalysis {
 }
 
 /**
- * Cleans a filename into a human-readable title.
+ * Cleans a filename or list of filenames into a human-readable title.
  * e.g., "OS_Lecture_3_Deadlocks.pdf" -> "OS Lecture 3 Deadlocks"
  */
-export function cleanFileNameToTitle(fileName: string): string {
-  const withoutExt = fileName.replace(/\.[^/.]+$/, '');
+export function cleanFileNameToTitle(fileNameOrNames: string | string[]): string {
+  if (Array.isArray(fileNameOrNames)) {
+    if (fileNameOrNames.length === 0) return 'Study Notes';
+    if (fileNameOrNames.length === 1) return cleanFileNameToTitle(fileNameOrNames[0]);
+    const firstTwo = fileNameOrNames.slice(0, 2).map((f) => cleanFileNameToTitle(f));
+    if (fileNameOrNames.length > 2) {
+      return `${firstTwo.join(', ')} +${fileNameOrNames.length - 2} more`;
+    }
+    return firstTwo.join(' & ');
+  }
+
+  const withoutExt = fileNameOrNames.replace(/\.[^/.]+$/, '');
   const clean = withoutExt
     .replace(/[_-]+/g, ' ')
     .replace(/([a-z])([A-Z])/g, '$1 $2')
@@ -31,8 +41,8 @@ export function cleanFileNameToTitle(fileName: string): string {
 /**
  * Heuristically extracts topics from raw text if AI is unreachable.
  */
-function extractTopicsHeuristically(text: string, fileName: string): PdfTopicAnalysis {
-  const mainTopic = cleanFileNameToTitle(fileName);
+function extractTopicsHeuristically(text: string, fileNameOrNames: string | string[]): PdfTopicAnalysis {
+  const mainTopic = cleanFileNameToTitle(fileNameOrNames);
   const lines = text
     .split('\n')
     .map((l) => l.trim())
@@ -87,9 +97,10 @@ function extractTopicsHeuristically(text: string, fileName: string): PdfTopicAna
  */
 export async function detectTopicsFromPdfText(
   text: string,
-  fileName: string
+  fileNameOrNames: string | string[]
 ): Promise<PdfTopicAnalysis> {
-  const fallback = extractTopicsHeuristically(text, fileName);
+  const fallback = extractTopicsHeuristically(text, fileNameOrNames);
+  const displayNames = Array.isArray(fileNameOrNames) ? fileNameOrNames.join(', ') : fileNameOrNames;
 
   const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY;
   if (!apiKey || apiKey === 'your-gemini-api-key' || !text || text.trim().length < 50) {
@@ -102,7 +113,7 @@ export async function detectTopicsFromPdfText(
   // Use the first 4,500 characters of the PDF for fast, high-quality topic extraction
   const snippet = text.slice(0, 4500);
 
-  const prompt = `You are an academic curriculum parser and professor. Analyze the following document text from file "${fileName}".
+  const prompt = `You are an academic curriculum parser and professor. Analyze the following document text from study material (${displayNames}).
 Identify:
 1. "mainTopic": The high-level subject or chapter title of this document (e.g., "Operating Systems: Process Synchronization & Deadlocks", "Organic Chemistry: Carbonyl Compounds", "Computer Networks: Transport Layer Protocols").
 2. "subtopics": An array of 3 to 6 distinct specific subtopics / modules covered inside this text.
@@ -171,3 +182,4 @@ Respond strictly with valid JSON matching this schema:
 
   return fallback;
 }
+
