@@ -431,15 +431,113 @@ export function generateRoomCode(): string {
   return result;
 }
 
-// Multi-tab sync channel
+// Multi-tab sync channel (same browser)
 const battleBroadcastChannels = new Map<string, BroadcastChannel>();
 
 export function getBattleChannel(roomCode: string): BroadcastChannel {
-  if (!battleBroadcastChannels.has(roomCode)) {
-    const channel = new BroadcastChannel(`learnify_battle_${roomCode}`);
-    battleBroadcastChannels.set(roomCode, channel);
+  const code = roomCode.trim().toUpperCase();
+  if (!battleBroadcastChannels.has(code)) {
+    const channel = new BroadcastChannel(`learnify_battle_${code}`);
+    battleBroadcastChannels.set(code, channel);
   }
-  return battleBroadcastChannels.get(roomCode)!;
+  return battleBroadcastChannels.get(code)!;
+}
+
+// Global cross-device Supabase Realtime channel (WebSockets)
+const battleSupabaseChannels = new Map<string, any>();
+
+export function getBattleSupabaseChannel(roomCode: string) {
+  const code = roomCode.trim().toUpperCase();
+  if (!isSupabaseConfigured()) return null;
+  if (!battleSupabaseChannels.has(code)) {
+    const ch = supabase.channel(`battle_${code}`, {
+      config: { broadcast: { self: true } },
+    });
+    ch.subscribe();
+    battleSupabaseChannels.set(code, ch);
+  }
+  return battleSupabaseChannels.get(code);
+}
+
+/**
+ * Broadcasts an event to both local tabs and remote Supabase WebSockets
+ */
+export async function broadcastBattleEvent(roomCode: string, type: string, payload: any) {
+  const upperCode = roomCode.trim().toUpperCase();
+
+  // 1. Same-origin tabs via BroadcastChannel
+  try {
+    getBattleChannel(upperCode).postMessage({ type, ...payload });
+  } catch (e) {
+    console.warn('BroadcastChannel error:', e);
+  }
+
+  // 2. Global WebSockets across all devices
+  const ch = getBattleSupabaseChannel(upperCode);
+  if (ch) {
+    try {
+      await ch.send({
+        type: 'broadcast',
+        event: type,
+        payload,
+      });
+    } catch (e) {
+      console.warn('Supabase Realtime broadcast notice:', e);
+    }
+  }
+}
+
+/**
+ * Discovers a battle room hosted on another device via Supabase Realtime
+ */
+export async function discoverBattleRoomRemote(
+  code: string
+): Promise<{ room: BattleRoom; participants: BattleParticipant[] } | null> {
+  const upperCode = code.trim().toUpperCase();
+  const ch = getBattleSupabaseChannel(upperCode);
+  if (!ch) return null;
+
+  return new Promise((resolve) => {
+    let resolved = false;
+
+    const timer = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        resolve(null);
+      }
+    }, 2800);
+
+    const onRoomState = (payload: any) => {
+      if (!resolved && payload?.payload?.room) {
+        resolved = true;
+        clearTimeout(timer);
+        resolve({
+          room: payload.payload.room,
+          participants: payload.payload.participants || [],
+        });
+      }
+    };
+
+    ch.on('broadcast', { event: 'ROOM_STATE' }, onRoomState);
+
+    const sendRequest = () => {
+      ch.send({
+        type: 'broadcast',
+        event: 'REQUEST_ROOM',
+        payload: { code: upperCode },
+      }).catch(() => {});
+    };
+
+    if (ch.state === 'joined') {
+      sendRequest();
+    } else {
+      ch.subscribe((status: string) => {
+        if (status === 'SUBSCRIBED') {
+          sendRequest();
+        }
+      });
+    }
+  });
 }
 
 export async function createBattleRoom(
@@ -486,7 +584,7 @@ export async function createBattleRoom(
     joined_at: new Date().toISOString(),
   };
 
-  // 1. Insert into Supabase if configured
+  // 1. Insert into Supabase if remote table exists
   if (isSupabaseConfigured()) {
     try {
       await supabase.from('battle_rooms').insert({
@@ -505,8 +603,8 @@ export async function createBattleRoom(
         display_name: hostName,
         score: 0,
       });
-    } catch (e) {
-      console.warn('Supabase createBattleRoom notice:', e);
+    } catch {
+      // Gracefully fall back to Realtime WebSockets if database tables are unmigrated
     }
   }
 
@@ -521,14 +619,24 @@ export async function createBattleRoom(
   participants[room.id] = [participant];
   setLocalItem(STORAGE_KEYS.BATTLE_PARTICIPANTS, participants);
 
-  getBattleChannel(code).postMessage({ type: 'ROOM_UPDATED', room, participants: [participant] });
+  // Initialize Supabase Realtime channel
+  getBattleSupabaseChannel(code);
+
+  await broadcastBattleEvent(code, 'ROOM_UPDATED', { room, participants: [participant] });
 
   return room;
 }
 
 export async function getBattleRoom(codeOrId: string): Promise<BattleRoom | null> {
-  const normalized = codeOrId.toUpperCase();
+  const normalized = codeOrId.trim().toUpperCase();
 
+  // 1. Local storage check first (immediate)
+  const rooms = getLocalItem<Record<string, BattleRoom>>(STORAGE_KEYS.BATTLE_ROOMS, {});
+  if (rooms[normalized] || rooms[codeOrId]) {
+    return rooms[normalized] || rooms[codeOrId];
+  }
+
+  // 2. Remote database check if configured
   if (isSupabaseConfigured()) {
     try {
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(codeOrId);
@@ -538,7 +646,7 @@ export async function getBattleRoom(codeOrId: string): Promise<BattleRoom | null
         : await query.eq('code', normalized).single();
 
       if (!error && data) {
-        return {
+        const loadedRoom: BattleRoom = {
           id: data.id,
           code: data.code,
           host_id: data.host_id,
@@ -551,19 +659,32 @@ export async function getBattleRoom(codeOrId: string): Promise<BattleRoom | null
           started_at: data.started_at,
           created_at: data.created_at,
         };
+        rooms[normalized] = loadedRoom;
+        rooms[loadedRoom.id] = loadedRoom;
+        setLocalItem(STORAGE_KEYS.BATTLE_ROOMS, rooms);
+        return loadedRoom;
       }
     } catch (e) {
       console.warn('Supabase getBattleRoom fallback:', e);
     }
   }
 
-  const rooms = getLocalItem<Record<string, BattleRoom>>(STORAGE_KEYS.BATTLE_ROOMS, {});
-  return rooms[normalized] || rooms[codeOrId] || null;
+  return null;
 }
 
 export async function getBattleParticipants(codeOrId: string): Promise<BattleParticipant[]> {
-  const normalized = codeOrId.toUpperCase();
+  const normalized = codeOrId.trim().toUpperCase();
 
+  // 1. Local storage check
+  const participants = getLocalItem<Record<string, BattleParticipant[]>>(STORAGE_KEYS.BATTLE_PARTICIPANTS, {});
+  if (participants[normalized] && participants[normalized].length > 0) {
+    return participants[normalized];
+  }
+  if (participants[codeOrId] && participants[codeOrId].length > 0) {
+    return participants[codeOrId];
+  }
+
+  // 2. Remote database check
   if (isSupabaseConfigured()) {
     try {
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(codeOrId);
@@ -580,7 +701,7 @@ export async function getBattleParticipants(codeOrId: string): Promise<BattlePar
         .order('score', { ascending: false });
 
       if (!error && data && data.length > 0) {
-        return data.map((p) => ({
+        const mapped = data.map((p) => ({
           id: p.user_id,
           room_id: p.room_id,
           user_id: p.user_id,
@@ -589,13 +710,16 @@ export async function getBattleParticipants(codeOrId: string): Promise<BattlePar
           answers: [],
           joined_at: p.joined_at,
         }));
+        participants[normalized] = mapped;
+        participants[codeOrId] = mapped;
+        setLocalItem(STORAGE_KEYS.BATTLE_PARTICIPANTS, participants);
+        return mapped;
       }
     } catch (e) {
       console.warn('Supabase getBattleParticipants fallback:', e);
     }
   }
 
-  const participants = getLocalItem<Record<string, BattleParticipant[]>>(STORAGE_KEYS.BATTLE_PARTICIPANTS, {});
   return participants[normalized] || participants[codeOrId] || [];
 }
 
@@ -604,17 +728,37 @@ export async function joinBattleRoom(
   userId: string,
   userName: string
 ): Promise<{ room: BattleRoom; participants: BattleParticipant[] }> {
-  const upperCode = code.toUpperCase();
-  const room = await getBattleRoom(upperCode);
+  const upperCode = code.trim().toUpperCase();
+
+  // 1. Check local storage
+  let room = await getBattleRoom(upperCode);
+
+  // 2. If not in local storage, discover across devices via Supabase Realtime
   if (!room) {
-    throw new Error('Room not found. Please verify the 5-character match code.');
+    const remote = await discoverBattleRoomRemote(upperCode);
+    if (remote) {
+      room = remote.room;
+      const rooms = getLocalItem<Record<string, BattleRoom>>(STORAGE_KEYS.BATTLE_ROOMS, {});
+      rooms[upperCode] = room;
+      rooms[room.id] = room;
+      setLocalItem(STORAGE_KEYS.BATTLE_ROOMS, rooms);
+
+      const parts = getLocalItem<Record<string, BattleParticipant[]>>(STORAGE_KEYS.BATTLE_PARTICIPANTS, {});
+      parts[upperCode] = remote.participants;
+      parts[room.id] = remote.participants;
+      setLocalItem(STORAGE_KEYS.BATTLE_PARTICIPANTS, parts);
+    }
+  }
+
+  if (!room) {
+    throw new Error(`Room '${upperCode}' not found. Please verify the 5-character match code or ensure the host is in the lobby.`);
   }
 
   if (room.status !== 'lobby' && room.status !== 'waiting') {
     throw new Error('Battle already in progress or completed.');
   }
 
-  const participants = await getBattleParticipants(room.id);
+  const participants = await getBattleParticipants(upperCode);
   if (participants.length >= 4 && !participants.some((p) => p.user_id === userId)) {
     throw new Error('Battle room is full (maximum 4 players).');
   }
@@ -634,27 +778,15 @@ export async function joinBattleRoom(
     };
     updatedParticipants.push(newParticipant);
 
-    if (isSupabaseConfigured()) {
-      try {
-        await supabase.from('battle_players').upsert({
-          room_id: room.id,
-          user_id: userId,
-          display_name: userName,
-          score: 0,
-        });
-      } catch (e) {
-        console.warn('Supabase player join notice:', e);
-      }
-    }
-
     const allParticipants = getLocalItem<Record<string, BattleParticipant[]>>(STORAGE_KEYS.BATTLE_PARTICIPANTS, {});
     allParticipants[upperCode] = updatedParticipants;
     allParticipants[room.id] = updatedParticipants;
     setLocalItem(STORAGE_KEYS.BATTLE_PARTICIPANTS, allParticipants);
+
+    await broadcastBattleEvent(upperCode, 'JOIN_ROOM', { player: newParticipant });
   }
 
-  getBattleChannel(upperCode).postMessage({
-    type: 'PLAYERS_UPDATED',
+  await broadcastBattleEvent(upperCode, 'PLAYERS_UPDATED', {
     room,
     participants: updatedParticipants,
   });
@@ -662,16 +794,60 @@ export async function joinBattleRoom(
   return { room, participants: updatedParticipants };
 }
 
+/**
+ * Adds an AI practice rival bot to an existing lobby
+ */
+export async function addBotToBattleRoom(roomCode: string): Promise<BattleParticipant[]> {
+  const upperCode = roomCode.trim().toUpperCase();
+  const room = await getBattleRoom(upperCode);
+  if (!room) throw new Error('Room not found');
+
+  const botId = 'bot_' + Math.random().toString(36).substring(2, 7);
+  const botPlayer: BattleParticipant = {
+    id: botId,
+    room_id: room.id,
+    user_id: botId,
+    name: 'DBMS Rival 🧠',
+    score: 0,
+    answers: [],
+    joined_at: new Date().toISOString(),
+  };
+
+  const current = await getBattleParticipants(upperCode);
+  const updated = [...current.filter((p) => !p.user_id.startsWith('bot_')), botPlayer];
+
+  const allParts = getLocalItem<Record<string, BattleParticipant[]>>(STORAGE_KEYS.BATTLE_PARTICIPANTS, {});
+  allParts[upperCode] = updated;
+  allParts[room.id] = updated;
+  setLocalItem(STORAGE_KEYS.BATTLE_PARTICIPANTS, allParts);
+
+  await broadcastBattleEvent(upperCode, 'PLAYERS_UPDATED', { participants: updated });
+  return updated;
+}
+
+/**
+ * Instantly launches a solo battle against the AI rival bot
+ */
+export async function startInstantBotBattle(
+  userId: string,
+  userName: string,
+  topicId?: string
+): Promise<{ room: BattleRoom; participants: BattleParticipant[] }> {
+  const room = await createBattleRoom(userId, userName, topicId);
+  await addBotToBattleRoom(room.code);
+  return startBattle(room.code, userId);
+}
+
 export async function startBattle(
   code: string,
   hostId: string
 ): Promise<{ room: BattleRoom; participants: BattleParticipant[] }> {
-  const upperCode = code.toUpperCase();
+  const upperCode = code.trim().toUpperCase();
   const room = await getBattleRoom(upperCode);
   if (!room) throw new Error('Room not found');
   if (room.host_id !== hostId) throw new Error('Only the room host can start the battle');
 
-  const participants = await getBattleParticipants(room.id);
+  const participants = await getBattleParticipants(upperCode);
   const nowIso = new Date().toISOString();
 
   const updatedRoom: BattleRoom = {
@@ -683,28 +859,12 @@ export async function startBattle(
     started_at: nowIso,
   };
 
-  if (isSupabaseConfigured()) {
-    try {
-      await supabase
-        .from('battle_rooms')
-        .update({
-          status: 'live',
-          current_index: 0,
-          question_started_at: nowIso,
-        })
-        .eq('id', room.id);
-    } catch (e) {
-      console.warn('Supabase startBattle notice:', e);
-    }
-  }
-
   const rooms = getLocalItem<Record<string, BattleRoom>>(STORAGE_KEYS.BATTLE_ROOMS, {});
   rooms[upperCode] = updatedRoom;
   rooms[room.id] = updatedRoom;
   setLocalItem(STORAGE_KEYS.BATTLE_ROOMS, rooms);
 
-  getBattleChannel(upperCode).postMessage({
-    type: 'ROOM_UPDATED',
+  await broadcastBattleEvent(upperCode, 'ROOM_UPDATED', {
     room: updatedRoom,
     participants,
   });
@@ -720,37 +880,8 @@ export async function submitBattleAnswer(
   selectedIndex: number,
   secondsRemaining = 15
 ): Promise<{ correct: boolean; answer_index: number; pointsAwarded: number; newScore: number }> {
-  const upperCode = code.toUpperCase();
+  const upperCode = code.trim().toUpperCase();
 
-  // 1. Try Supabase RPC submit_answer (Server-authoritative correctness & speed bonus)
-  if (isSupabaseConfigured()) {
-    try {
-      const { data, error } = await supabase.rpc('submit_answer', {
-        p_room_id: roomId,
-        p_question_index: questionIndex,
-        p_selected_index: selectedIndex,
-      });
-
-      if (!error && data) {
-        getBattleChannel(upperCode).postMessage({
-          type: 'SCORE_UPDATED',
-          userId,
-          newScore: data.new_score,
-        });
-
-        return {
-          correct: data.correct,
-          answer_index: data.answer_index,
-          pointsAwarded: data.points_awarded,
-          newScore: data.new_score,
-        };
-      }
-    } catch (e) {
-      console.warn('Supabase submit_answer RPC fallback:', e);
-    }
-  }
-
-  // 2. Safe local evaluation
   const allQuestions = getLocalItem<Question[]>(STORAGE_KEYS.QUESTIONS, SEED_QUESTIONS);
   const room = await getBattleRoom(upperCode);
   const targetQId = room?.question_ids[questionIndex];
@@ -775,12 +906,12 @@ export async function submitBattleAnswer(
   const allParticipants = getLocalItem<Record<string, BattleParticipant[]>>(STORAGE_KEYS.BATTLE_PARTICIPANTS, {});
   allParticipants[upperCode] = updatedParticipants;
   allParticipants[roomId] = updatedParticipants;
+  if (room?.id) allParticipants[room.id] = updatedParticipants;
   setLocalItem(STORAGE_KEYS.BATTLE_PARTICIPANTS, allParticipants);
 
   const me = updatedParticipants.find((p) => p.user_id === userId);
 
-  getBattleChannel(upperCode).postMessage({
-    type: 'SCORE_UPDATED',
+  await broadcastBattleEvent(upperCode, 'SCORE_UPDATED', {
     participants: updatedParticipants,
     userId,
     newScore: me?.score || 0,
@@ -798,33 +929,7 @@ export async function advanceBattleQuestion(
   roomId: string,
   code: string
 ): Promise<{ currentIndex: number; status: string; totalQuestions: number }> {
-  const upperCode = code.toUpperCase();
-
-  if (isSupabaseConfigured()) {
-    try {
-      const { data, error } = await supabase.rpc('advance_question', {
-        p_room_id: roomId,
-      });
-
-      if (!error && data) {
-        getBattleChannel(upperCode).postMessage({
-          type: 'QUESTION_ADVANCED',
-          currentIndex: data.current_index,
-          status: data.status,
-        });
-
-        return {
-          currentIndex: data.current_index,
-          status: data.status,
-          totalQuestions: data.total_questions,
-        };
-      }
-    } catch (e) {
-      console.warn('Supabase advance_question RPC fallback:', e);
-    }
-  }
-
-  // Local advance fallback
+  const upperCode = code.trim().toUpperCase();
   const room = await getBattleRoom(upperCode);
   if (!room) throw new Error('Room not found');
 
@@ -843,10 +948,10 @@ export async function advanceBattleQuestion(
   const rooms = getLocalItem<Record<string, BattleRoom>>(STORAGE_KEYS.BATTLE_ROOMS, {});
   rooms[upperCode] = updatedRoom;
   rooms[roomId] = updatedRoom;
+  rooms[room.id] = updatedRoom;
   setLocalItem(STORAGE_KEYS.BATTLE_ROOMS, rooms);
 
-  getBattleChannel(upperCode).postMessage({
-    type: 'ROOM_UPDATED',
+  await broadcastBattleEvent(upperCode, 'ROOM_UPDATED', {
     room: updatedRoom,
   });
 
@@ -898,9 +1003,10 @@ export function subscribeToBattle(
   onRoomUpdate: (room: BattleRoom) => void,
   onPlayersUpdate: (players: BattleParticipant[]) => void
 ): () => void {
-  const upperCode = code.toUpperCase();
+  const upperCode = code.trim().toUpperCase();
   const bc = getBattleChannel(upperCode);
 
+  // 1. Same-browser BroadcastChannel sync
   const handleBcMessage = (e: MessageEvent) => {
     const data = e.data;
     if (data?.type === 'ROOM_UPDATED' && data.room) {
@@ -909,47 +1015,94 @@ export function subscribeToBattle(
     if (data?.type === 'PLAYERS_UPDATED' && data.participants) {
       onPlayersUpdate(data.participants);
     }
-    if (data?.type === 'SCORE_UPDATED') {
-      getBattleParticipants(roomId).then(onPlayersUpdate);
+    if (data?.type === 'SCORE_UPDATED' && data.participants) {
+      onPlayersUpdate(data.participants);
     }
   };
 
   bc.addEventListener('message', handleBcMessage);
 
-  let supabaseChannel: any = null;
+  // 2. Cross-device WebSockets via Supabase Realtime Broadcast
+  const ch = getBattleSupabaseChannel(upperCode);
 
-  if (isSupabaseConfigured()) {
-    try {
-      supabaseChannel = supabase
-        .channel(`battle_room_${roomId}`)
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'battle_rooms', filter: `id=eq.${roomId}` },
-          (payload: any) => {
-            if (payload.new) {
-              onRoomUpdate(payload.new as BattleRoom);
-            }
-          }
-        )
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'battle_players', filter: `room_id=eq.${roomId}` },
-          async () => {
-            const freshPlayers = await getBattleParticipants(roomId);
-            onPlayersUpdate(freshPlayers);
-          }
-        )
-        .subscribe();
-    } catch (e) {
-      console.warn('Realtime subscription notice:', e);
+  const handleRequestRoom = async () => {
+    const currentRoom = await getBattleRoom(upperCode);
+    const currentParts = await getBattleParticipants(upperCode);
+    if (currentRoom) {
+      ch?.send({
+        type: 'broadcast',
+        event: 'ROOM_STATE',
+        payload: { room: currentRoom, participants: currentParts },
+      }).catch(() => {});
     }
+  };
+
+  const handleJoinRoom = async (event: any) => {
+    const player = event?.payload?.player;
+    if (player) {
+      const currentParts = await getBattleParticipants(upperCode);
+      if (!currentParts.some((p) => p.user_id === player.user_id)) {
+        const updated = [...currentParts, player];
+        const allParts = getLocalItem<Record<string, BattleParticipant[]>>(STORAGE_KEYS.BATTLE_PARTICIPANTS, {});
+        allParts[upperCode] = updated;
+        allParts[roomId] = updated;
+        setLocalItem(STORAGE_KEYS.BATTLE_PARTICIPANTS, allParts);
+        onPlayersUpdate(updated);
+
+        // Acknowledge update to channel
+        ch?.send({
+          type: 'broadcast',
+          event: 'PLAYERS_UPDATED',
+          payload: { participants: updated },
+        }).catch(() => {});
+      }
+    }
+  };
+
+  const handleRoomUpdated = (event: any) => {
+    if (event?.payload?.room) {
+      const r = event.payload.room;
+      const rooms = getLocalItem<Record<string, BattleRoom>>(STORAGE_KEYS.BATTLE_ROOMS, {});
+      rooms[upperCode] = r;
+      rooms[roomId] = r;
+      rooms[r.id] = r;
+      setLocalItem(STORAGE_KEYS.BATTLE_ROOMS, rooms);
+      onRoomUpdate(r);
+    }
+  };
+
+  const handlePlayersUpdated = (event: any) => {
+    if (event?.payload?.participants) {
+      const parts = event.payload.participants;
+      const allParts = getLocalItem<Record<string, BattleParticipant[]>>(STORAGE_KEYS.BATTLE_PARTICIPANTS, {});
+      allParts[upperCode] = parts;
+      allParts[roomId] = parts;
+      setLocalItem(STORAGE_KEYS.BATTLE_PARTICIPANTS, allParts);
+      onPlayersUpdate(parts);
+    }
+  };
+
+  const handleScoreUpdated = (event: any) => {
+    if (event?.payload?.participants) {
+      const parts = event.payload.participants;
+      const allParts = getLocalItem<Record<string, BattleParticipant[]>>(STORAGE_KEYS.BATTLE_PARTICIPANTS, {});
+      allParts[upperCode] = parts;
+      allParts[roomId] = parts;
+      setLocalItem(STORAGE_KEYS.BATTLE_PARTICIPANTS, allParts);
+      onPlayersUpdate(parts);
+    }
+  };
+
+  if (ch) {
+    ch.on('broadcast', { event: 'REQUEST_ROOM' }, handleRequestRoom);
+    ch.on('broadcast', { event: 'JOIN_ROOM' }, handleJoinRoom);
+    ch.on('broadcast', { event: 'ROOM_UPDATED' }, handleRoomUpdated);
+    ch.on('broadcast', { event: 'PLAYERS_UPDATED' }, handlePlayersUpdated);
+    ch.on('broadcast', { event: 'SCORE_UPDATED' }, handleScoreUpdated);
   }
 
   return () => {
     bc.removeEventListener('message', handleBcMessage);
-    if (supabaseChannel && isSupabaseConfigured()) {
-      supabase.removeChannel(supabaseChannel);
-    }
   };
 }
 

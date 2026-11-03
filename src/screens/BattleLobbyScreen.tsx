@@ -13,6 +13,8 @@ import {
   getBattleParticipants,
   subscribeToBattle,
   getAllTopics,
+  addBotToBattleRoom,
+  startInstantBotBattle,
 } from '../lib/storage';
 import {
   SugarySwords,
@@ -97,13 +99,14 @@ export const BattleLobbyScreen: React.FC<BattleLobbyScreenProps> = ({ onStartGam
 
   const handleJoinRoom = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !joinCodeInput.trim()) return;
+    const cleanCode = joinCodeInput.trim().toUpperCase();
+    if (!user || cleanCode.length < 4) return;
 
     setError(null);
     setLoading(true);
     try {
       const { room: joinedRoom, participants: parts } = await joinBattleRoom(
-        joinCodeInput.trim().toUpperCase(),
+        cleanCode,
         user.id,
         user.name
       );
@@ -111,25 +114,39 @@ export const BattleLobbyScreen: React.FC<BattleLobbyScreenProps> = ({ onStartGam
       setParticipants(parts);
     } catch (err: any) {
       console.error(err);
-      setError(err?.message || 'Room code verification failed');
+      setError(err?.message || 'Match code verification failed. Ensure the host has created the room.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAddBot = () => {
+  const handleAddBot = async () => {
     if (!room) return;
-    const botId = 'bot_' + Math.random().toString(36).substring(2, 7);
-    const botPlayer: BattleParticipant = {
-      id: botId,
-      room_id: room.id,
-      user_id: botId,
-      name: 'DBMS Rival 🧠',
-      score: 0,
-      answers: [],
-      joined_at: new Date().toISOString(),
-    };
-    setParticipants((prev) => [...prev.filter((p) => !p.user_id.startsWith('bot_')), botPlayer]);
+    try {
+      const updated = await addBotToBattleRoom(room.code);
+      setParticipants(updated);
+    } catch (err: any) {
+      console.error('Failed to add bot:', err);
+    }
+  };
+
+  const handleInstantBotDuel = async () => {
+    if (!user) return;
+    setError(null);
+    setLoading(true);
+    try {
+      const { room: startedRoom, participants: parts } = await startInstantBotBattle(
+        user.id,
+        user.name,
+        selectedTopicId || undefined
+      );
+      onStartGame(startedRoom, parts);
+    } catch (err: any) {
+      console.error(err);
+      setError(err?.message || 'Failed to start instant AI duel');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleStartBattle = async () => {
@@ -137,6 +154,9 @@ export const BattleLobbyScreen: React.FC<BattleLobbyScreenProps> = ({ onStartGam
     setError(null);
     setLoading(true);
     try {
+      if (participants.length < 2) {
+        await addBotToBattleRoom(room.code);
+      }
       const { room: started, participants: parts } = await startBattle(room.code, user.id);
       onStartGame(started, parts);
     } catch (err: any) {
@@ -242,29 +262,56 @@ export const BattleLobbyScreen: React.FC<BattleLobbyScreenProps> = ({ onStartGam
                 Join with Room Code
               </h2>
               <p className="text-xs sm:text-sm text-slate-500 mt-1.5 leading-relaxed font-medium">
-                Enter the 6-character room code from your opponent to jump into their lobby.
+                Enter the 5-character match code from your opponent to jump into their lobby.
               </p>
             </div>
 
             <form onSubmit={handleJoinRoom} className="space-y-3">
               <input
                 type="text"
-                maxLength={6}
+                maxLength={5}
                 value={joinCodeInput}
                 onChange={(e) => setJoinCodeInput(e.target.value.toUpperCase())}
-                placeholder="ENTER CODE (E.G. X7K9P2)"
+                placeholder="ENTER 5-LETTER CODE (E.G. K9P2W)"
                 className="w-full h-12 rounded-full bg-slate-50 border border-slate-200 px-5 text-center font-mono tracking-widest text-base font-black text-slate-900 uppercase placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
 
               <button
                 type="submit"
-                disabled={loading || joinCodeInput.length < 4}
+                disabled={loading || joinCodeInput.trim().length !== 5}
                 className="bg-slate-100 hover:bg-slate-200 text-slate-800 w-full py-3.5 rounded-full text-base font-bold flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
               >
-                <span>{loading ? 'Joining...' : 'Enter Battle Room'}</span>
+                <span>{loading ? 'Connecting to Room...' : 'Enter Battle Room'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </form>
+          </div>
+
+          {/* Quick Practice Duel vs Bot */}
+          <div className="md:col-span-2 bg-gradient-to-r from-indigo-50/80 via-white to-purple-50/70 border border-indigo-200/80 p-6 rounded-3xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xs">
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-bold text-xl shadow-xs shrink-0">
+                🤖
+              </div>
+              <div>
+                <span className="text-base font-black text-slate-900 block">
+                  Solo Match: Practice Against AI Rival
+                </span>
+                <span className="text-xs text-slate-600 font-medium">
+                  No match code or opponent needed. Jump straight into a simulated 1v1 speed battle against DBMS Rival 🧠.
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              disabled={loading}
+              onClick={handleInstantBotDuel}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white px-7 py-3 rounded-full text-sm font-bold flex items-center gap-2 shadow-xs cursor-pointer whitespace-nowrap transition-transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50"
+            >
+              <Play className="w-4 h-4 fill-current" />
+              <span>{loading ? 'Starting Duel...' : 'Play vs AI Bot Now'}</span>
+            </button>
           </div>
 
         </div>
