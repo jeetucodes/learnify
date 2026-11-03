@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   FileText,
   Play,
-  UploadCloud,
 } from 'lucide-react';
 import { extractTextFromPdf, computeContentHash } from '../lib/pdfExtractor';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
@@ -12,7 +11,13 @@ import {
   generateFallbackQuestionsFromText,
   GeneratedQuizSchema,
 } from '../lib/storage';
-import { SugarySparkles, SugaryCheck, SugaryAlert } from '../components/SugaryIcons';
+import {
+  SugarySparkles,
+  SugaryCheck,
+  SugaryAlert,
+  SugaryBook,
+  SugaryLightbulb,
+} from '../components/SugaryIcons';
 import type { Question } from '../types/database';
 
 interface UploadNotesScreenProps {
@@ -154,7 +159,7 @@ export const UploadNotesScreen: React.FC<UploadNotesScreenProps> = ({ onStartQui
           className="border-2 border-dashed border-indigo-200 hover:border-indigo-400 rounded-3xl p-8 sm:p-12 flex flex-col items-center justify-center cursor-pointer transition-all bg-indigo-50/30 hover:bg-indigo-50/60 group"
         >
           <div className="w-16 h-16 rounded-3xl bg-white border border-indigo-100 flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform mb-4">
-            <UploadCloud className="w-8 h-8 text-indigo-600" />
+            <SugaryBook size={38} />
           </div>
 
           <span className="text-lg font-bold text-slate-900">
@@ -224,13 +229,16 @@ export const UploadNotesScreen: React.FC<UploadNotesScreenProps> = ({ onStartQui
         {/* Ready to Play Quiz */}
         {status === 'ready' && generatedQuestions.length > 0 && (
           <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="text-left">
-              <span className="text-sm font-black text-slate-900 block">
-                {generatedQuestions.length} Questions Ready!
-              </span>
-              <span className="text-xs text-slate-500 font-medium">
-                Syllabus-aligned with answer rationales and explanations.
-              </span>
+            <div className="text-left flex items-center gap-3">
+              <SugaryLightbulb size={32} />
+              <div>
+                <span className="text-sm font-black text-slate-900 block">
+                  {generatedQuestions.length} Questions Ready!
+                </span>
+                <span className="text-xs text-slate-500 font-medium">
+                  Syllabus-aligned with answer rationales and explanations.
+                </span>
+              </div>
             </div>
 
             <button

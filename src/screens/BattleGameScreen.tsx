@@ -1,7 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  Medal,
-} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import {
   submitBattleAnswer,
@@ -15,6 +12,8 @@ import {
   SugaryCheck,
   SugaryAlert,
   SugaryTrophy,
+  SugaryClock,
+  SugaryStar,
 } from '../components/SugaryIcons';
 import type { BattleRoom, BattleParticipant, Question } from '../types/database';
 
@@ -175,14 +174,17 @@ export const BattleGameScreen: React.FC<BattleGameScreenProps> = ({
             </div>
           </div>
 
-          {/* Center Timer & Round */}
+          {/* Center Timer & Round with 3D Sugary Clock */}
           <div className="col-span-2 flex flex-col items-center justify-center">
-            <div
-              className={`w-12 h-12 rounded-full flex items-center justify-center font-mono font-black text-base shadow-xs ${
-                timeLeft <= 5 ? 'bg-rose-50 border border-rose-300 text-rose-600 animate-pulse' : 'bg-amber-50 border border-amber-300 text-amber-800'
-              }`}
-            >
-              {timeLeft}s
+            <div className="relative flex items-center justify-center">
+              <SugaryClock size={40} />
+              <span
+                className={`absolute inset-0 flex items-center justify-center font-mono font-black text-xs pt-1 ${
+                  timeLeft <= 5 ? 'text-rose-600 animate-pulse font-extrabold' : 'text-slate-900'
+                }`}
+              >
+                {timeLeft}s
+              </span>
             </div>
             <span className="text-[10px] font-mono font-black uppercase tracking-wider text-slate-400 mt-1">
               Q {currentQIndex + 1}/{questions.length}
@@ -293,7 +295,7 @@ export const BattleGameScreen: React.FC<BattleGameScreenProps> = ({
               {isWinner ? (
                 <SugaryTrophy size={48} />
               ) : (
-                <Medal className="w-10 h-10 text-slate-400" />
+                <SugaryStar size={48} />
               )}
             </div>
 

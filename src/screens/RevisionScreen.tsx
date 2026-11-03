@@ -3,7 +3,13 @@ import { Play, BookOpen } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getTopicMastery, getRevisionQuestions } from '../lib/storage';
 import { ProgressBar } from '../components/ProgressBar';
-import { SugaryBrain, SugaryAlert, SugaryCheck } from '../components/SugaryIcons';
+import {
+  SugaryBrain,
+  SugaryAlert,
+  SugaryCheck,
+  SugaryCalendar,
+  SugaryClock,
+} from '../components/SugaryIcons';
 import type { TopicMastery, Question } from '../types/database';
 
 interface RevisionScreenProps {
@@ -60,8 +66,8 @@ export const RevisionScreen: React.FC<RevisionScreenProps> = ({
       <div className="bg-gradient-to-br from-indigo-50/90 via-white to-violet-50/80 border border-indigo-100/90 shadow-[0_8px_24px_rgba(79,70,229,0.06)] p-6 sm:p-10 rounded-3xl flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="max-w-xl">
           <div className="inline-flex items-center gap-2 rounded-full bg-white px-3.5 py-1 text-xs font-bold text-indigo-700 mb-3 border border-indigo-100 shadow-xs">
-            <SugaryBrain size={18} />
-            <span>Spaced Repetition Engine</span>
+            <SugaryCalendar size={18} />
+            <span>Daily Spaced Repetition Queue</span>
           </div>
 
           <h1 className="text-2xl sm:text-4xl font-black text-slate-900 leading-tight">
@@ -111,9 +117,10 @@ export const RevisionScreen: React.FC<RevisionScreenProps> = ({
                     <h3 className="font-bold text-base text-slate-900">
                       {topic.topic_title}
                     </h3>
-                    <span className="text-xs text-slate-500 font-medium">
-                      {topic.unit_title}
-                    </span>
+                    <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium mt-0.5">
+                      <SugaryClock size={14} />
+                      <span>{topic.unit_title} · Due for revision</span>
+                    </div>
                   </div>
                   <span className="font-mono tabular-nums font-bold text-xs px-2.5 py-1 rounded-full bg-rose-100 text-rose-900">
                     {topic.accuracy}% ({topic.correct_attempts}/{topic.total_attempts} pass)
@@ -152,9 +159,12 @@ export const RevisionScreen: React.FC<RevisionScreenProps> = ({
 
       {/* Overview of Mastered Topics */}
       <div className="bg-white border border-slate-200/80 shadow-[0_8px_30px_rgba(0,0,0,0.03)] p-6 sm:p-8 rounded-3xl">
-        <h3 className="text-lg font-black text-slate-900 mb-4">
-          Mastered Topics ({masteries.filter((m) => !m.needs_revision && m.total_attempts > 0).length})
-        </h3>
+        <div className="flex items-center gap-2.5 mb-4">
+          <SugaryBrain size={22} />
+          <h3 className="text-lg font-black text-slate-900">
+            Mastered Topics ({masteries.filter((m) => !m.needs_revision && m.total_attempts > 0).length})
+          </h3>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {masteries
             .filter((m) => !m.needs_revision && m.total_attempts > 0)

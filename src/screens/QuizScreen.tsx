@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   Flag,
   ArrowRight,
-  HelpCircle,
   Sparkles,
   BookOpen,
 } from 'lucide-react';
@@ -13,7 +12,12 @@ import {
   flagQuestion,
 } from '../lib/storage';
 import { ProgressBar } from '../components/ProgressBar';
-import { SugaryBolt, SugaryCheck, SugaryAlert } from '../components/SugaryIcons';
+import {
+  SugaryBolt,
+  SugaryCheck,
+  SugaryAlert,
+  SugaryLightbulb,
+} from '../components/SugaryIcons';
 import type { Question } from '../types/database';
 
 interface QuizScreenProps {
@@ -285,10 +289,12 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({
         {isAnswered && (
           <div className="bg-indigo-50/70 border border-indigo-100 p-5 sm:p-6 rounded-2xl space-y-4 pt-4">
             <div className="flex items-start gap-3">
-              <HelpCircle className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
+              <div className="shrink-0 mt-0.5">
+                <SugaryLightbulb size={24} />
+              </div>
               <div>
                 <span className="text-xs font-extrabold uppercase tracking-wider text-indigo-800 block">
-                  Concept Rationale
+                  Concept Rationale & Insight
                 </span>
                 <p className="text-sm text-slate-700 mt-1 leading-relaxed font-medium">
                   {currentQ.explanation}

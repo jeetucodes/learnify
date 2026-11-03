@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
   LogOut,
-  History,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getUserAttempts } from '../lib/storage';
@@ -12,6 +11,8 @@ import {
   SugaryTarget,
   SugaryShield,
   SugaryTrophy,
+  SugaryCalendar,
+  SugaryClock,
 } from '../components/SugaryIcons';
 import type { Attempt } from '../types/database';
 
@@ -110,9 +111,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate }) => {
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900 truncate">
               {user.name}
             </h1>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Member since {new Date(user.last_active).toLocaleDateString()}
-            </p>
+            <div className="flex items-center justify-center sm:justify-start gap-1.5 text-xs text-slate-500 mt-1">
+              <SugaryCalendar size={15} />
+              <span>Member since {new Date(user.last_active).toLocaleDateString()}</span>
+            </div>
           </div>
 
           <button
@@ -197,8 +199,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate }) => {
       {/* Recent Activity History */}
       <div className="bg-white border border-slate-200/80 shadow-[0_8px_30px_rgba(0,0,0,0.03)] p-6 sm:p-8 rounded-3xl">
         <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
-          <div className="flex items-center gap-2">
-            <History className="w-5 h-5 text-indigo-600" />
+          <div className="flex items-center gap-2.5">
+            <SugaryClock size={22} />
             <h3 className="text-lg font-bold text-slate-900">
               Recent Practice History
             </h3>

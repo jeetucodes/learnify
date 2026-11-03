@@ -8,7 +8,6 @@ import { getTopicMastery } from '../lib/storage';
 import { Heatmap } from '../components/Heatmap';
 import {
   SugaryFlame,
-  SugaryTrophy,
   SugaryBolt,
   SugaryTarget,
   SugaryBook,
@@ -16,6 +15,8 @@ import {
   SugarySparkles,
   SugaryBrain,
   SugaryAlert,
+  SugaryCalendar,
+  SugaryStar,
 } from '../components/SugaryIcons';
 import type { TopicMastery } from '../types/database';
 
@@ -70,7 +71,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
 
         <div className="max-w-xl relative z-10">
           <div className="inline-flex items-center gap-2 rounded-full bg-white/95 px-3.5 py-1 text-xs font-bold text-slate-800 mb-3.5 border border-indigo-100 shadow-xs">
-            <SugaryTrophy size={18} />
+            <SugaryStar size={16} />
             <span>DBMS Relational Console · College Exam Prep</span>
           </div>
 
@@ -120,9 +121,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
             <span className="text-3xl sm:text-4xl font-black font-mono tabular-nums text-slate-900">
               {user?.streak || 0}d
             </span>
-            <span className="block text-xs font-semibold text-amber-700 mt-1">
-              Active daily streak 🔥
-            </span>
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-700 mt-1">
+              <SugaryCalendar size={13} />
+              <span>Daily goal active</span>
+            </div>
           </div>
         </div>
 

@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   Copy,
   Check,
-  Users,
   Play,
   ArrowRight,
 } from 'lucide-react';
@@ -14,7 +13,12 @@ import {
   getBattleParticipants,
   getBattleChannel,
 } from '../lib/storage';
-import { SugarySwords, SugaryTrophy, SugarySparkles } from '../components/SugaryIcons';
+import {
+  SugarySwords,
+  SugaryTrophy,
+  SugarySparkles,
+  SugaryEnvelope,
+} from '../components/SugaryIcons';
 import type { BattleRoom, BattleParticipant } from '../types/database';
 
 interface BattleLobbyScreenProps {
@@ -177,8 +181,8 @@ export const BattleLobbyScreen: React.FC<BattleLobbyScreenProps> = ({ onStartGam
           {/* Join Room Card */}
           <div className="bg-white border border-slate-200/80 shadow-[0_8px_24px_rgba(0,0,0,0.02)] p-7 sm:p-8 rounded-3xl flex flex-col justify-between space-y-6">
             <div>
-              <div className="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center shadow-xs mb-4">
-                <Users className="w-7 h-7 text-emerald-600" />
+              <div className="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center shadow-xs mb-4">
+                <SugaryEnvelope size={34} />
               </div>
               <h2 className="text-xl font-black text-slate-900">
                 Join with Room Code

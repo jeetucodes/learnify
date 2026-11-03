@@ -10,6 +10,8 @@ import {
   SugaryBolt,
   SugaryCheck,
   SugaryAlert,
+  SugaryStar,
+  SugaryBubbleHeart,
 } from '../components/SugaryIcons';
 import type { Topic } from '../types/database';
 
@@ -49,10 +51,14 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
       {/* Celebration Card */}
       <div className="bg-white border border-slate-200/80 shadow-[0_12px_36px_rgba(79,70,229,0.06)] p-8 sm:p-10 rounded-3xl space-y-6">
         
-        {/* 3D Sugary Trophy */}
+        {/* 3D Sugary Trophy or Star */}
         <div className="relative inline-flex items-center justify-center">
           <div className="w-24 h-24 rounded-3xl bg-amber-50/80 border border-amber-200/60 flex items-center justify-center shadow-xs">
-            <SugaryTrophy size={54} />
+            {percent >= 60 ? (
+              <SugaryTrophy size={54} />
+            ) : (
+              <SugaryStar size={54} />
+            )}
           </div>
         </div>
 
@@ -138,6 +144,12 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
             <span>Zero mistakes in this session! Flawless run.</span>
           </div>
         )}
+
+        {/* Encouraging Tip Pill */}
+        <div className="flex items-center justify-center gap-2 text-xs font-semibold text-slate-500 py-1">
+          <SugaryBubbleHeart size={16} />
+          <span>Every question completed builds your exam mastery!</span>
+        </div>
 
         {/* Primary Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-3 pt-2">
