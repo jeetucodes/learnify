@@ -4,6 +4,7 @@ import {
   ArrowRight,
   Sparkles,
   BookOpen,
+  Send,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -18,6 +19,7 @@ import {
   SugaryAlert,
   SugaryLightbulb,
 } from '../components/SugaryIcons';
+import { explainQuestionWithGemini, askGeminiDoubt } from '../lib/geminiExplainer';
 import type { Question } from '../types/database';
 
 interface QuizScreenProps {
@@ -51,6 +53,14 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({
   const [flagged, setFlagged] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // Gemini AI Deep Explanation state
+  const [geminiExplanation, setGeminiExplanation] = useState<string | null>(null);
+  const [loadingExplanation, setLoadingExplanation] = useState(false);
+  const [showAiExplanation, setShowAiExplanation] = useState(false);
+  const [userDoubt, setUserDoubt] = useState('');
+  const [doubtAnswer, setDoubtAnswer] = useState<string | null>(null);
+  const [loadingDoubt, setLoadingDoubt] = useState(false);
+
   useEffect(() => {
     async function load() {
       if (customQuestions && customQuestions.length > 0) {
@@ -66,11 +76,58 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({
 
   const currentQ = questions[currentIndex];
 
+  const handleFetchGeminiExplanation = async () => {
+    if (!currentQ) return;
+    setLoadingExplanation(true);
+    setShowAiExplanation(true);
+    try {
+      const text = await explainQuestionWithGemini({
+        question: currentQ.question,
+        options: currentQ.options,
+        selectedIndex: selectedOption,
+        correctIndex: currentQ.answer_index,
+        currentExplanation: currentQ.explanation,
+        topicTitle,
+      });
+      setGeminiExplanation(text);
+    } catch {
+      setGeminiExplanation(currentQ.explanation || 'Unable to load AI explanation.');
+    } finally {
+      setLoadingExplanation(false);
+    }
+  };
+
+  const handleAskDoubt = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userDoubt.trim() || !currentQ || loadingDoubt) return;
+    setLoadingDoubt(true);
+    try {
+      const answer = await askGeminiDoubt(currentQ, userDoubt.trim());
+      setDoubtAnswer(answer);
+    } catch (err: any) {
+      setDoubtAnswer('Failed to clarify doubt: ' + (err?.message || 'Error'));
+    } finally {
+      setLoadingDoubt(false);
+    }
+  };
+
   const handleSelectOption = async (index: number) => {
     if (isAnswered || !currentQ || !user) return;
 
     setSelectedOption(index);
     setIsAnswered(true);
+
+    // Pre-fetch deep Gemini explanation in the background
+    explainQuestionWithGemini({
+      question: currentQ.question,
+      options: currentQ.options,
+      selectedIndex: index,
+      correctIndex: currentQ.answer_index,
+      currentExplanation: currentQ.explanation,
+      topicTitle,
+    }).then((res) => {
+      setGeminiExplanation(res);
+    }).catch(() => {});
 
     const isCorrect = index === currentQ.answer_index;
     if (isCorrect) {
@@ -102,6 +159,12 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({
       setSelectedOption(null);
       setIsAnswered(false);
       setFlagged(false);
+      setGeminiExplanation(null);
+      setLoadingExplanation(false);
+      setShowAiExplanation(false);
+      setUserDoubt('');
+      setDoubtAnswer(null);
+      setLoadingDoubt(false);
     } else {
       onFinish({
         score: score + (selectedOption === currentQ?.answer_index ? 1 : 0),
@@ -288,18 +351,102 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({
         {/* Explanation & Next Step Drawer */}
         {isAnswered && (
           <div className="bg-indigo-50/70 border border-indigo-100 p-5 sm:p-6 rounded-2xl space-y-4 pt-4">
+            
+            {/* Quick Core Rationale */}
             <div className="flex items-start gap-3">
               <div className="shrink-0 mt-0.5">
                 <SugaryLightbulb size={24} />
               </div>
-              <div>
+              <div className="flex-1">
                 <span className="text-xs font-extrabold uppercase tracking-wider text-indigo-800 block">
                   Concept Rationale & Insight
                 </span>
-                <p className="text-sm text-slate-700 mt-1 leading-relaxed font-medium">
+                <p className="text-sm text-slate-800 mt-1 leading-relaxed font-medium">
                   {currentQ.explanation}
                 </p>
               </div>
+            </div>
+
+            {/* Gemini AI Deep Pedagogical Breakdown */}
+            <div className="border border-indigo-200/90 bg-white rounded-2xl p-4 sm:p-5 shadow-xs space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs shrink-0">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-black text-slate-900 block">
+                      Gemini AI Master Explanation
+                    </span>
+                    <span className="text-[11px] text-slate-500 font-medium">
+                      In-depth theory · Trap distractor analysis · Exam memory tips
+                    </span>
+                  </div>
+                </div>
+
+                {!showAiExplanation && !loadingExplanation && (
+                  <button
+                    type="button"
+                    onClick={handleFetchGeminiExplanation}
+                    className="self-start sm:self-auto px-4 py-1.5 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs hover:-translate-y-0.5 active:translate-y-0"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Deep Explain with Gemini AI</span>
+                  </button>
+                )}
+              </div>
+
+              {loadingExplanation && (
+                <div className="py-4 flex items-center gap-3 text-xs font-bold text-indigo-800">
+                  <div className="w-4 h-4 rounded-full border-2 border-indigo-600 border-t-transparent animate-spin" />
+                  <span>Gemini 3.5 Flash is analyzing theoretical foundations and distractor pitfalls...</span>
+                </div>
+              )}
+
+              {showAiExplanation && geminiExplanation && (
+                <div className="space-y-4 pt-1">
+                  <div className="text-xs sm:text-[13px] text-slate-700 leading-relaxed font-normal whitespace-pre-line space-y-2.5 bg-slate-50/70 p-4 rounded-xl border border-slate-200/80">
+                    {geminiExplanation}
+                  </div>
+
+                  {/* Ask a Doubt Input Form */}
+                  <div className="pt-2 border-t border-slate-100 space-y-2">
+                    <span className="text-xs font-bold text-slate-700 block">
+                      Still have a doubt? Ask Professor Gemini:
+                    </span>
+                    <form onSubmit={handleAskDoubt} className="flex gap-2">
+                      <input
+                        type="text"
+                        value={userDoubt}
+                        onChange={(e) => setUserDoubt(e.target.value)}
+                        placeholder="e.g. Why is Option A incorrect? What is the mathematical proof?"
+                        className="flex-1 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-indigo-500 shadow-inner"
+                      />
+                      <button
+                        type="submit"
+                        disabled={loadingDoubt || !userDoubt.trim()}
+                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50 shrink-0 shadow-xs"
+                      >
+                        {loadingDoubt ? (
+                          <div className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                        ) : (
+                          <Send className="w-3.5 h-3.5" />
+                        )}
+                        <span>Ask AI</span>
+                      </button>
+                    </form>
+
+                    {doubtAnswer && (
+                      <div className="p-3.5 rounded-xl bg-purple-50/80 border border-purple-200 text-xs text-purple-950 space-y-1 mt-2">
+                        <span className="font-extrabold text-purple-800 flex items-center gap-1.5">
+                          <Sparkles className="w-3.5 h-3.5 text-purple-600" /> Professor Gemini's Clarification:
+                        </span>
+                        <p className="leading-relaxed whitespace-pre-line">{doubtAnswer}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end pt-2 border-t border-indigo-100/80">

@@ -50,7 +50,7 @@ export async function generateQuestionsFromNotes(
 }
 
 /**
- * Direct client Gemini API call if key is present
+ * Direct client Gemini API call with high-yield university exam standards
  */
 async function callGeminiDirectly(
   text: string,
@@ -62,21 +62,32 @@ async function callGeminiDirectly(
   const model = (import.meta as any).env?.VITE_GEMINI_MODEL || 'gemini-3.5-flash';
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-  const prompt = `You are an expert university exam writer. Analyze the following study notes and generate exactly ${count} multiple choice questions.
-Difficulty: ${difficulty}.
-RULES:
-1. Generate strictly 4 distinct options per question.
-2. Only one correct answer.
-3. answer_index must be an integer from 0 to 3.
-4. Base every question exclusively on the provided text.
-5. Return JSON conforming to schema:
+  const prompt = `You are an elite university professor and exam creator in Computer Science & Databases. Analyze the following study notes and generate exactly ${count} university-grade multiple-choice questions.
+
+Target Difficulty: ${difficulty}.
+- If "easy": Focus on core terminology, essential database principles, standard relational algebra/SQL syntax, and fundamental definitions.
+- If "medium": Focus on conceptual scenarios, query outcome predictions, functional dependency testing, normal form analysis, or transaction concurrency behavior.
+- If "hard": Focus on multi-step analytical problems, edge-case transaction schedules, index tree balance scenarios, query optimization trade-offs, and critical reasoning.
+
+CRITICAL QUALITY REQUIREMENTS:
+1. Question Quality: Write realistic, thoughtful, scenario-grounded questions. NEVER ask superficial trivia or verbatim fill-in-the-blanks.
+2. 4 Plausible Options: Distractors must represent real student misconceptions or related theoretical mechanisms. Avoid obvious throwaways like "None of the above" or "All of the above".
+3. Deep Multi-Part Pedagogical Explanation:
+   Every question's "explanation" MUST be formatted in markdown with:
+   - 🎯 **Core Concept**: Comprehensive explanation of why the correct option is true and the theoretical foundation.
+   - ❌ **Option Breakdown**: Bullet-by-bullet breakdown of why each distractor is wrong.
+   - 💡 **Exam Takeaway**: High-yield mnemonic or key rule for exams.
+4. answer_index must be an integer (0, 1, 2, or 3) indicating the exact correct option.
+5. Base all questions strictly on concepts covered in the notes text.
+
+Return strictly valid JSON matching this schema:
 {
   "questions": [
     {
       "question": "string",
       "options": ["string", "string", "string", "string"],
       "answer_index": 0,
-      "explanation": "string"
+      "explanation": "string (structured markdown with 🎯 Core Concept, ❌ Option Breakdown, and 💡 Exam Takeaway)"
     }
   ]
 }
@@ -140,21 +151,24 @@ async function callGrokDirectly(
   const model = (import.meta as any).env?.VITE_XAI_MODEL || 'grok-2-latest';
   const endpoint = 'https://api.x.ai/v1/chat/completions';
 
-  const systemPrompt = `You are an expert university exam writer. Analyze the provided study notes and generate exactly ${count} multiple choice questions.
+  const systemPrompt = `You are an elite university computer science professor. Analyze the provided study notes and generate exactly ${count} university-grade multiple choice questions.
 Difficulty: ${difficulty}.
-RULES:
-1. Generate strictly 4 distinct options per question.
-2. Only one correct answer.
-3. answer_index must be an integer from 0 to 3.
-4. Base every question exclusively on the provided text.
-5. Return JSON conforming to schema:
+CRITICAL QUALITY STANDARDS:
+1. Scenario & Concept Grounded: Write analytical, thought-provoking questions.
+2. 4 Realistic Options: Distractors must represent common student misconceptions.
+3. Deep Structured Explanation: For each question, format "explanation" with:
+   🎯 **Core Concept**: Theoretical proof of why the correct option is right.
+   ❌ **Option Breakdown**: Breakdown of why the distractors fail.
+   💡 **Exam Takeaway**: Memory tip or high-yield rule.
+4. Only one correct answer (answer_index 0 to 3).
+5. Return strictly valid JSON:
 {
   "questions": [
     {
       "question": "string",
       "options": ["string", "string", "string", "string"],
       "answer_index": 0,
-      "explanation": "string"
+      "explanation": "string (structured markdown with 🎯 Core Concept, ❌ Option Breakdown, and 💡 Exam Takeaway)"
     }
   ]
 }`;
@@ -327,7 +341,7 @@ function synthesizeQuestionsFromText(
       question: questionText,
       options,
       answer_index: answerIndex,
-      explanation: `From uploaded notes: "${fact.fullSentence}"`,
+      explanation: `🎯 **Core Concept**: **${fact.term}** is defined as: ${fact.description}.\n\n❌ **Option Breakdown**: The other choices refer to distinct database mechanisms and do not define this concept.\n\n💡 **Exam Takeaway**: "${fact.fullSentence}"`,
       source: 'ai',
       source_passage: fact.fullSentence,
       flagged: false,
@@ -367,7 +381,7 @@ function synthesizeQuestionsFromText(
       question: `According to the uploaded notes, which statement accurately reflects: "${words.slice(0, 7).join(' ')}..."?`,
       options: rawOptions,
       answer_index: correctIdx,
-      explanation: `Verified passage from study notes: "${s}"`,
+      explanation: `🎯 **Core Concept**: "${keyFact}" accurately represents the foundational theorem presented in the notes.\n\n❌ **Option Breakdown**: The other distractors present contradictory or incorrect database operations.\n\n💡 **Exam Takeaway**: Verified passage from study notes: "${s}"`,
       source: 'ai',
       source_passage: s,
       flagged: false,
