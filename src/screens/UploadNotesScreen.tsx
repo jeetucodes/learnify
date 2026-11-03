@@ -5,6 +5,7 @@ import {
   Trash2,
   Flag,
   RotateCcw,
+  Lock,
 } from 'lucide-react';
 import { extractTextFromPdf } from '../lib/pdfExtractor';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
@@ -36,6 +37,7 @@ export const UploadNotesScreen: React.FC<UploadNotesScreenProps> = ({ onStartQui
   const [customTopicName, setCustomTopicName] = useState<string>('');
   const [questionCount, setQuestionCount] = useState<number>(10);
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
+  const [autoStart, setAutoStart] = useState<boolean>(true);
 
   // Process and step tracking
   const [status, setStatus] = useState<
@@ -176,6 +178,15 @@ export const UploadNotesScreen: React.FC<UploadNotesScreenProps> = ({ onStartQui
       setGeneratedQuestions(questionsRaw);
       setStatus('ready');
       setStatusMessage(`Successfully generated ${questionsRaw.length} syllabus MCQs!`);
+
+      if (autoStart) {
+        const topicTitle =
+          selectedTopicId === 'custom'
+            ? customTopicName.trim() || 'Custom Notes Topic'
+            : topics.find((t) => t.id === selectedTopicId)?.title || 'Notes to Quiz';
+
+        onStartQuiz(selectedTopicId || 'notes-quiz', topicTitle, questionsRaw);
+      }
     } catch (err: any) {
       console.error('Quiz generation error:', err);
       setStatus('error');
@@ -291,7 +302,7 @@ export const UploadNotesScreen: React.FC<UploadNotesScreenProps> = ({ onStartQui
             </div>
 
             {/* Syllabus Topic & Parameters Selection */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
               
               {/* 1. Target Topic Selector */}
               <div>
@@ -301,7 +312,7 @@ export const UploadNotesScreen: React.FC<UploadNotesScreenProps> = ({ onStartQui
                 <select
                   value={selectedTopicId}
                   onChange={(e) => setSelectedTopicId(e.target.value)}
-                  className="w-full text-xs font-semibold p-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 focus:outline-none focus:border-indigo-500"
+                  className="w-full text-xs font-semibold p-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 focus:outline-none focus:border-indigo-500 shadow-xs"
                 >
                   {topics.map((t) => (
                     <option key={t.id} value={t.id}>
@@ -322,52 +333,82 @@ export const UploadNotesScreen: React.FC<UploadNotesScreenProps> = ({ onStartQui
                 )}
               </div>
 
-              {/* 2. Number of Questions (5, 10, 15) */}
+              {/* 2. Number of Questions (5, 10, 15, 20) */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                   Question Count
                 </label>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {[5, 10, 15].map((cnt) => (
+                <div className="grid grid-cols-4 gap-1.5">
+                  {[5, 10, 15, 20].map((cnt) => (
                     <button
                       key={cnt}
                       type="button"
                       onClick={() => setQuestionCount(cnt)}
                       className={`py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
                         questionCount === cnt
-                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs ring-2 ring-indigo-200'
                           : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                       }`}
                     >
-                      {cnt} MCQs
+                      {cnt}
                     </button>
                   ))}
                 </div>
+                <span className="block text-[11px] text-slate-500 font-medium mt-1">
+                  Generates {questionCount} multiple-choice questions
+                </span>
               </div>
 
-              {/* 3. Difficulty */}
+              {/* 3. Difficulty (Easy, Medium, Hard) */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                   Difficulty Level
                 </label>
                 <div className="grid grid-cols-3 gap-1.5">
-                  {(['easy', 'medium', 'hard'] as const).map((lvl) => (
+                  {[
+                    { lvl: 'easy' as const, label: 'Easy', emoji: '🟢' },
+                    { lvl: 'medium' as const, label: 'Medium', emoji: '🟡' },
+                    { lvl: 'hard' as const, label: 'Hard', emoji: '🔴' },
+                  ].map(({ lvl, label, emoji }) => (
                     <button
                       key={lvl}
                       type="button"
                       onClick={() => setDifficulty(lvl)}
-                      className={`py-2 text-xs font-bold rounded-xl border capitalize transition-all cursor-pointer ${
+                      className={`py-2 text-xs font-bold rounded-xl border capitalize transition-all cursor-pointer flex items-center justify-center gap-1 ${
                         difficulty === lvl
-                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs ring-2 ring-indigo-200'
                           : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                       }`}
                     >
-                      {lvl}
+                      <span>{emoji}</span>
+                      <span>{label}</span>
                     </button>
                   ))}
                 </div>
+                <span className="block text-[11px] text-slate-500 font-medium mt-1">
+                  {difficulty === 'easy' && 'Focuses on direct definitions & key facts'}
+                  {difficulty === 'medium' && 'Tests core concepts & practical application'}
+                  {difficulty === 'hard' && 'Advanced multi-step reasoning & edge cases'}
+                </span>
               </div>
 
+            </div>
+
+            {/* Auto Launch and Answer Reveal Guarantee */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3.5 rounded-2xl bg-indigo-50/60 border border-indigo-100 text-xs">
+              <label className="flex items-center gap-2.5 cursor-pointer font-bold text-slate-800 select-none">
+                <input
+                  type="checkbox"
+                  checked={autoStart}
+                  onChange={(e) => setAutoStart(e.target.checked)}
+                  className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer"
+                />
+                <span>Start quiz directly after generation</span>
+              </label>
+              <div className="flex items-center gap-1.5 text-[11px] font-bold text-indigo-700">
+                <Lock className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Answers & explanations stay hidden until you solve each question</span>
+              </div>
             </div>
 
             {/* Action Button */}
@@ -383,8 +424,10 @@ export const UploadNotesScreen: React.FC<UploadNotesScreenProps> = ({ onStartQui
                   {status === 'extracting'
                     ? 'Extracting PDF text...'
                     : status === 'generating'
-                    ? `Generating ${questionCount} MCQs...`
-                    : `Generate ${questionCount} MCQs from PDF`}
+                    ? `Generating ${questionCount} ${difficulty.toUpperCase()} MCQs...`
+                    : autoStart
+                    ? `Generate & Start Quiz (${questionCount} ${difficulty.toUpperCase()} MCQs)`
+                    : `Generate ${questionCount} ${difficulty.toUpperCase()} MCQs from PDF`}
                 </span>
               </button>
             </div>
@@ -448,7 +491,7 @@ export const UploadNotesScreen: React.FC<UploadNotesScreenProps> = ({ onStartQui
                   {generatedQuestions.length} Questions Ready for Quiz!
                 </span>
                 <span className="text-xs text-slate-500 font-medium">
-                  Review questions below, delete unwanted items, or click to start immediately.
+                  Answers & explanations stay hidden here to test your mastery. Solve them in the quiz to see instant feedback!
                 </span>
               </div>
             </div>
@@ -463,7 +506,7 @@ export const UploadNotesScreen: React.FC<UploadNotesScreenProps> = ({ onStartQui
             </button>
           </div>
 
-          {/* Cards List */}
+          {/* Cards List (Neutral, answers concealed until solved) */}
           <div className="space-y-3">
             {generatedQuestions.map((q, qIdx) => (
               <div
@@ -512,44 +555,51 @@ export const UploadNotesScreen: React.FC<UploadNotesScreenProps> = ({ onStartQui
                   {q.question}
                 </h3>
 
-                {/* 4 Options Grid */}
+                {/* 4 Options Grid (Neutral styling - no spoiler!) */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
-                  {q.options.map((opt, optIdx) => {
-                    const isCorrect = optIdx === q.answer_index;
-                    return (
-                      <div
-                        key={optIdx}
-                        className={`p-2.5 rounded-xl text-xs flex items-center justify-between border ${
-                          isCorrect
-                            ? 'bg-emerald-50 border-emerald-300 text-emerald-950 font-bold'
-                            : 'bg-slate-50 border-slate-200 text-slate-700'
-                        }`}
-                      >
-                        <span>
-                          {String.fromCharCode(65 + optIdx)}. {opt}
-                        </span>
-                        {isCorrect && (
-                          <span className="text-[10px] font-black text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
-                            Correct
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
+                  {q.options.map((opt, optIdx) => (
+                    <div
+                      key={optIdx}
+                      className="p-3 rounded-xl text-xs flex items-center gap-2.5 border bg-slate-50/70 border-slate-200 text-slate-800 font-medium"
+                    >
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-white border border-slate-300 font-mono text-[10px] font-bold text-slate-700">
+                        {String.fromCharCode(65 + optIdx)}
+                      </span>
+                      <span className="leading-snug">{opt}</span>
+                    </div>
+                  ))}
                 </div>
 
-                {/* Explanation */}
-                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-1">
-                  <div className="font-bold text-slate-800">Rationale:</div>
-                  <div>{q.explanation}</div>
-                  {q.source_passage && (
-                    <div className="text-[11px] text-slate-500 italic pt-1 border-t border-slate-200">
-                      Source Quote: "{q.source_passage}"
-                    </div>
-                  )}
+                {/* Hidden Explanation / Reveal Locked Notice */}
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <Lock className="w-4 h-4 text-indigo-600 shrink-0" />
+                    <span className="text-slate-700 font-medium">
+                      Correct answer and detailed rationale are revealed <strong>after</strong> you submit your choice in the quiz.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleStart}
+                    className="shrink-0 px-3 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-lg text-xs transition cursor-pointer"
+                  >
+                    Solve Now →
+                  </button>
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* Bottom Start Quiz Call-to-Action */}
+          <div className="pt-2 text-center">
+            <button
+              type="button"
+              onClick={handleStart}
+              className="w-full sm:w-auto px-10 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full text-base font-bold inline-flex items-center justify-center gap-2 shadow-md cursor-pointer hover:-translate-y-0.5 active:translate-y-0 transition-transform"
+            >
+              <Play className="w-4 h-4 fill-current" />
+              <span>Start Quiz ({generatedQuestions.length} Questions)</span>
+            </button>
           </div>
 
         </div>

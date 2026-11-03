@@ -472,7 +472,7 @@ export const BattleGameScreen: React.FC<BattleGameScreenProps> = ({
                   <SugaryFlame size={16} /> Match Performance XP
                 </span>
                 <span className="font-mono text-sm font-black text-amber-700">
-                  +{awardedXp ?? (isWinner ? 50 : 0) + correctAnswersCountRef.current * 10} XP
+                  +{awardedXp ?? ((isWinner ? 50 : 0) + correctAnswersCount * 10)} XP
                 </span>
               </div>
               <div className="text-[11px] text-amber-800/80 flex items-center justify-between pt-1 border-t border-amber-200/60">

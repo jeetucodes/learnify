@@ -17,7 +17,7 @@ export async function generateQuestionsFromNotes(
   params: GenerateQuizParams
 ): Promise<Question[]> {
   const { text, topicId, count = 10, difficulty = 'medium' } = params;
-  const targetCount = Math.min(15, Math.max(5, count));
+  const targetCount = Math.min(30, Math.max(3, count));
 
   // 1. Attempt client-side Gemini call if VITE_GEMINI_API_KEY is configured
   const clientGeminiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY;
