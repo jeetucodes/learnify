@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Mail, Lock, User, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { SugaryBook } from '../components/SugaryIcons';
+import { LearnifyLogo } from '../components/LearnifyLogo';
 
 interface LoginScreenProps {
   onSuccess: () => void;
@@ -67,14 +67,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess, onBackToLan
           
           {/* Header Brand */}
           <div className="flex flex-col items-center space-y-2">
-            <div className="w-16 h-16 rounded-3xl bg-indigo-50 border border-indigo-100 flex items-center justify-center shadow-xs">
-              <SugaryBook size={38} />
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-black text-slate-900">
+            <LearnifyLogo size={64} glow />
+            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
               Learnify
             </h1>
             <p className="text-xs font-semibold text-slate-500">
-              Practice · Compete · Revise
+              Study · Compete · Repeat
             </p>
           </div>
 

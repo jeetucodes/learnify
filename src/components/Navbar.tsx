@@ -1,7 +1,8 @@
 import React from 'react';
 import { User, BookOpen, Sparkles, Swords, RotateCcw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { SugaryFlame, SugaryBolt, SugaryBook } from './SugaryIcons';
+import { SugaryFlame, SugaryBolt } from './SugaryIcons';
+import { LearnifyBrand } from './LearnifyLogo';
 
 interface NavbarProps {
   onNavigate: (route: string) => void;
@@ -23,30 +24,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentRoute }) => {
     <header className="sticky top-0 z-40 w-full backdrop-blur-xl bg-white/85 border-b border-indigo-100/60 shadow-[0_2px_12px_rgba(79,70,229,0.04)] px-4 sm:px-6 py-2.5 select-none pt-[env(safe-area-inset-top,0px)] transition-all">
       <div className="max-w-6xl mx-auto flex items-center justify-between gap-3">
         
-        {/* Brand & Tagline */}
-        <div
-          onClick={() => onNavigate('home')}
-          className="flex items-center gap-2.5 cursor-pointer group rounded-full p-1 transition-transform hover:scale-[1.02]"
-        >
-          {/* 3D Sugary Brand Icon */}
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-50 to-indigo-100/80 border border-indigo-200/60 shadow-xs">
-            <SugaryBook size={26} />
-          </div>
-
-          <div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-xl font-extrabold tracking-tight text-[var(--dp-color-ink)] group-hover:text-[var(--dp-color-primary-action)] transition-colors">
-                Learnify
-              </span>
-              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200/60 shadow-xs">
-                Prep
-              </span>
-            </div>
-            <span className="text-[11px] text-[var(--dp-color-ink-secondary)] font-medium block leading-none mt-0.5 hidden sm:block">
-              Practice · Compete · Revise
-            </span>
-          </div>
-        </div>
+        {/* Brand Logo & Wordmark */}
+        <LearnifyBrand onNavigate={() => onNavigate('home')} size="md" />
 
         {/* Desktop Bank of Modern Clean Navigation Pills */}
         <nav className="hidden md:flex items-center gap-1 p-1 rounded-full bg-slate-100/90 border border-slate-200/60 shadow-inner">
