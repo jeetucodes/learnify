@@ -32,7 +32,20 @@ export async function generateQuestionsFromNotes(
     }
   }
 
-  // 2. High-fidelity algorithmic question synthesizer grounded in the note text
+  // 2. Attempt client-side Grok (xAI) call if VITE_XAI_API_KEY is configured
+  const clientXaiKey = (import.meta as any).env?.VITE_XAI_API_KEY;
+  if (clientXaiKey && clientXaiKey !== 'your-xai-api-key') {
+    try {
+      const questionsFromGrok = await callGrokDirectly(text, clientXaiKey, targetCount, difficulty, topicId);
+      if (questionsFromGrok && questionsFromGrok.length > 0) {
+        return questionsFromGrok;
+      }
+    } catch (err) {
+      console.warn('Direct Grok call fallback:', err);
+    }
+  }
+
+  // 3. High-fidelity algorithmic question synthesizer grounded in the note text
   return synthesizeQuestionsFromText(text, targetCount, topicId);
 }
 
@@ -46,7 +59,7 @@ async function callGeminiDirectly(
   difficulty: string,
   topicId?: string | null
 ): Promise<Question[] | null> {
-  const model = (import.meta as any).env?.VITE_GEMINI_MODEL || 'gemini-1.5-flash';
+  const model = (import.meta as any).env?.VITE_GEMINI_MODEL || 'gemini-3.5-flash';
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
   const prompt = `You are an expert university exam writer. Analyze the following study notes and generate exactly ${count} multiple choice questions.
@@ -91,6 +104,85 @@ ${text.slice(0, 15000)}
   if (!rawJson) return null;
 
   const parsed = JSON.parse(rawJson);
+  if (!Array.isArray(parsed.questions)) return null;
+
+  const validated: Question[] = [];
+  for (const q of parsed.questions) {
+    const valid = QuestionSchema.safeParse(q);
+    if (valid.success) {
+      validated.push({
+        id: safeUUID(),
+        topic_id: topicId || null,
+        question: valid.data.question,
+        options: valid.data.options,
+        answer_index: valid.data.answer_index,
+        explanation: valid.data.explanation,
+        source: 'ai',
+        flagged: false,
+        created_at: new Date().toISOString(),
+      });
+    }
+  }
+
+  return validated.length > 0 ? validated : null;
+}
+
+/**
+ * Direct client Grok (xAI) API call if key is present
+ */
+async function callGrokDirectly(
+  text: string,
+  apiKey: string,
+  count: number,
+  difficulty: string,
+  topicId?: string | null
+): Promise<Question[] | null> {
+  const model = (import.meta as any).env?.VITE_XAI_MODEL || 'grok-2-latest';
+  const endpoint = 'https://api.x.ai/v1/chat/completions';
+
+  const systemPrompt = `You are an expert university exam writer. Analyze the provided study notes and generate exactly ${count} multiple choice questions.
+Difficulty: ${difficulty}.
+RULES:
+1. Generate strictly 4 distinct options per question.
+2. Only one correct answer.
+3. answer_index must be an integer from 0 to 3.
+4. Base every question exclusively on the provided text.
+5. Return JSON conforming to schema:
+{
+  "questions": [
+    {
+      "question": "string",
+      "options": ["string", "string", "string", "string"],
+      "answer_index": 0,
+      "explanation": "string"
+    }
+  ]
+}`;
+
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: `NOTES TEXT:\n${text.slice(0, 15000)}` },
+      ],
+      response_format: { type: 'json_object' },
+      temperature: 0.2,
+    }),
+  });
+
+  if (!res.ok) return null;
+
+  const data = await res.json();
+  const rawContent = data?.choices?.[0]?.message?.content;
+  if (!rawContent) return null;
+
+  const parsed = JSON.parse(rawContent);
   if (!Array.isArray(parsed.questions)) return null;
 
   const validated: Question[] = [];
