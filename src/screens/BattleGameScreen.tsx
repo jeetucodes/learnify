@@ -98,8 +98,32 @@ export const BattleGameScreen: React.FC<BattleGameScreenProps> = ({
       });
     }, 1000);
 
+    // If opponent is a bot / simulated rival, simulate their answer
+    const currentOpponent = participants.find((p) => p.user_id !== user?.id);
+    let botTimer: ReturnType<typeof setTimeout> | null = null;
+    if (
+      currentOpponent &&
+      (currentOpponent.user_id.startsWith('bot_') ||
+        currentOpponent.user_id === 'opponent' ||
+        currentOpponent.user_id === 'opponent-placeholder')
+    ) {
+      const delayMs = 2500 + Math.random() * 4000;
+      botTimer = setTimeout(() => {
+        const isBotCorrect = Math.random() < 0.75;
+        const botPoints = isBotCorrect ? 10 + Math.floor(Math.random() * 12) : 0;
+        setParticipants((prev) =>
+          prev.map((p) =>
+            p.user_id === currentOpponent.user_id
+              ? { ...p, score: p.score + botPoints }
+              : p
+          )
+        );
+      }, delayMs);
+    }
+
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
+      if (botTimer) clearTimeout(botTimer);
     };
   }, [currentQIndex, isGameOver]);
 

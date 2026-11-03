@@ -12,12 +12,14 @@ import {
   startBattle,
   getBattleParticipants,
   getBattleChannel,
+  addBotToBattleRoom,
 } from '../lib/storage';
 import {
   SugarySwords,
   SugaryTrophy,
   SugarySparkles,
   SugaryEnvelope,
+  SugaryBolt,
 } from '../components/SugaryIcons';
 import type { BattleRoom, BattleParticipant } from '../types/database';
 
@@ -41,23 +43,37 @@ export const BattleLobbyScreen: React.FC<BattleLobbyScreenProps> = ({ onStartGam
     const handleMessage = (e: MessageEvent) => {
       const data = e.data;
       if (data?.type === 'ROOM_UPDATED') {
-        setRoom(data.room);
-        setParticipants(data.participants);
+        if (data.room) setRoom(data.room);
+        if (data.participants) setParticipants(data.participants);
       } else if (data?.type === 'BATTLE_STARTED') {
-        onStartGame(data.room, participants);
+        onStartGame(data.room, data.participants || participants);
       }
     };
 
     channel.addEventListener('message', handleMessage);
 
+    // Initial fetch
     getBattleParticipants(room.code).then((p) => {
       setParticipants(p);
     });
 
+    // Cross-tab polling interval so updates arrive even across windows
+    const interval = setInterval(() => {
+      getBattleParticipants(room.code).then((p) => {
+        setParticipants((current) => {
+          if (JSON.stringify(current) !== JSON.stringify(p)) {
+            return p;
+          }
+          return current;
+        });
+      });
+    }, 1200);
+
     return () => {
       channel.removeEventListener('message', handleMessage);
+      clearInterval(interval);
     };
-  }, [room?.code, onStartGame, participants]);
+  }, [room?.code, onStartGame]);
 
   const handleCreateRoom = async () => {
     if (!user) return;
@@ -69,7 +85,8 @@ export const BattleLobbyScreen: React.FC<BattleLobbyScreenProps> = ({ onStartGam
       const parts = await getBattleParticipants(newRoom.code);
       setParticipants(parts);
     } catch (err: any) {
-      setError(err.message || 'Failed to initialize battle room');
+      console.error(err);
+      setError(err?.message || 'Failed to initialize battle room');
     } finally {
       setLoading(false);
     }
@@ -90,9 +107,21 @@ export const BattleLobbyScreen: React.FC<BattleLobbyScreenProps> = ({ onStartGam
       setRoom(joinedRoom);
       setParticipants(parts);
     } catch (err: any) {
-      setError(err.message || 'Room code verification failed');
+      console.error(err);
+      setError(err?.message || 'Room code verification failed');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAddBot = async () => {
+    if (!room) return;
+    setError(null);
+    try {
+      const updated = await addBotToBattleRoom(room.code);
+      setParticipants(updated);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to add rival bot');
     }
   };
 
@@ -101,10 +130,11 @@ export const BattleLobbyScreen: React.FC<BattleLobbyScreenProps> = ({ onStartGam
     setError(null);
     setLoading(true);
     try {
-      const started = await startBattle(room.code, user.id);
-      onStartGame(started, participants);
+      const { room: started, participants: parts } = await startBattle(room.code, user.id);
+      onStartGame(started, parts);
     } catch (err: any) {
-      setError(err.message || 'Failed to start battle');
+      console.error(err);
+      setError(err?.message || 'Failed to start battle');
     } finally {
       setLoading(false);
     }
@@ -216,83 +246,110 @@ export const BattleLobbyScreen: React.FC<BattleLobbyScreenProps> = ({ onStartGam
         </div>
       ) : (
         /* Active Waiting Lobby */
-        <div className="bg-white border border-slate-200/80 shadow-[0_12px_36px_rgba(0,0,0,0.03)] p-8 sm:p-10 rounded-3xl space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#38315A]/10">
+        <div className="bg-white border border-slate-200/80 shadow-[0_12px_36px_rgba(0,0,0,0.03)] p-6 sm:p-10 rounded-3xl space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100">
             <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-[var(--dp-color-ink-secondary)] block">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block">
                 Active Battle Room
               </span>
-              <div className="flex items-center gap-3 mt-1">
-                <span className="font-mono text-3xl sm:text-4xl font-extrabold tracking-widest text-[var(--dp-color-ink)]">
+              <div className="flex items-center gap-3 mt-1.5">
+                <span className="font-mono text-3xl sm:text-4xl font-black tracking-widest text-slate-900">
                   {room.code}
                 </span>
                 <button
                   type="button"
                   onClick={handleCopyCode}
-                  className="clay-btn-secondary px-3 py-1.5 text-xs font-bold flex items-center gap-1.5 clay-focus cursor-pointer"
+                  className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 px-3.5 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs transition-all"
                 >
-                  {copied ? <Check className="w-3.5 h-3.5 text-[#059669]" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span>{copied ? 'Copied!' : 'Copy Code'}</span>
+                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copied ? 'Copied!' : 'Copy Match Code'}</span>
                 </button>
               </div>
             </div>
 
             <div className="text-left sm:text-right">
-              <span className="text-xs font-bold text-[var(--dp-color-ink-secondary)]">
-                Status: Waiting for players
+              <span className="text-xs font-bold text-slate-500">
+                {participants.length >= 2 ? 'Lobby Status: Ready to Duel' : 'Waiting for challenger'}
               </span>
-              <span className="block text-sm font-bold text-[var(--dp-color-ink)]">
+              <span className="block text-sm font-black text-indigo-700 mt-0.5">
                 {participants.length} / 2 Players Connected
               </span>
             </div>
           </div>
 
-          {/* Participant Cushions */}
+          {/* Participant Cards */}
           <div>
-            <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--dp-color-ink-secondary)] mb-3">
-              Fighters in Lobby
-            </h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                Fighters in Lobby
+              </h3>
+              {participants.length < 2 && isHost && (
+                <button
+                  type="button"
+                  onClick={handleAddBot}
+                  className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer transition-colors"
+                >
+                  <SugaryBolt size={14} />
+                  <span>Add AI Rival</span>
+                </button>
+              )}
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {participants.map((p, idx) => (
                 <div
                   key={p.user_id}
-                  className="clay-cushion-cream p-4 rounded-2xl flex items-center justify-between"
+                  className="bg-slate-50/80 border border-slate-200/80 p-4 rounded-2xl flex items-center justify-between"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-[var(--dp-color-accent)] text-[var(--dp-color-ink)] font-bold flex items-center justify-center shadow-xs">
+                    <div className="w-10 h-10 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center shadow-xs">
                       {p.name.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <span className="font-bold text-base text-[var(--dp-color-ink)] block">
+                      <span className="font-bold text-base text-slate-900 block">
                         {p.name}
                       </span>
-                      <span className="text-xs text-[var(--dp-color-ink-secondary)]">
-                        {idx === 0 ? '👑 Room Host' : '⚔️ Challenger'}
+                      <span className="text-xs text-slate-500 font-medium">
+                        {idx === 0 ? '👑 Room Host' : p.user_id.startsWith('bot_') ? '🤖 AI Practice Rival' : '⚔️ Challenger'}
                       </span>
                     </div>
                   </div>
 
-                  <span className="text-xs font-bold px-3 py-1 rounded-full bg-[var(--dp-color-surface-support)] text-[var(--dp-color-ink)]">
+                  <span className="text-xs font-bold px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
                     Ready
                   </span>
                 </div>
               ))}
 
               {participants.length < 2 && (
-                <div className="border-2 border-dashed border-[#38315A]/15 rounded-2xl p-4 flex items-center justify-center text-xs font-bold text-[var(--dp-color-ink-secondary)] min-h-[72px]">
-                  <span>Waiting for opponent to join...</span>
+                <div className="border-2 border-dashed border-indigo-200/80 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 bg-indigo-50/30">
+                  <div className="text-left">
+                    <span className="text-xs font-bold text-slate-800 block">
+                      Waiting for rival to enter code <span className="font-mono text-indigo-700 font-black">{room.code}</span>
+                    </span>
+                    <span className="text-[11px] text-slate-500 font-medium">
+                      Or play immediately by adding an AI practice rival!
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleAddBot}
+                    className="bg-white hover:bg-slate-50 text-indigo-700 border border-indigo-200 px-4 py-2 rounded-full text-xs font-bold shadow-xs cursor-pointer shrink-0 transition-all hover:-translate-y-0.5 active:translate-y-0"
+                  >
+                    <span>+ Add AI Rival</span>
+                  </button>
                 </div>
               )}
             </div>
           </div>
 
           {/* Action Trigger */}
-          <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-100">
             <button
               type="button"
               onClick={() => setRoom(null)}
-              className="clay-btn-secondary px-5 py-2.5 text-sm font-bold clay-focus cursor-pointer w-full sm:w-auto"
+              className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2.5 rounded-full text-xs font-bold cursor-pointer transition-colors w-full sm:w-auto"
             >
               Leave Room
             </button>
@@ -302,14 +359,14 @@ export const BattleLobbyScreen: React.FC<BattleLobbyScreenProps> = ({ onStartGam
                 type="button"
                 disabled={loading}
                 onClick={handleStartBattle}
-                className="clay-btn-primary px-8 py-3.5 text-base font-bold flex items-center justify-center gap-2 clay-focus cursor-pointer shadow-md w-full sm:w-auto"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3.5 rounded-full text-base font-bold flex items-center justify-center gap-2 shadow-sm hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer w-full sm:w-auto disabled:opacity-50"
               >
                 <Play className="w-4 h-4 fill-current" />
-                <span>Start Speed Duel Now</span>
+                <span>{loading ? 'Launching Duel...' : participants.length >= 2 ? 'Start Speed Duel Now' : 'Start Duel (Auto-Match Bot)'}</span>
               </button>
             ) : (
-              <div className="text-xs font-bold text-[var(--dp-color-ink-secondary)]">
-                Waiting for host to launch the duel...
+              <div className="text-xs font-bold text-slate-500">
+                Waiting for room host to launch the duel...
               </div>
             )}
           </div>

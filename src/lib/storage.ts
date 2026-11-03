@@ -36,6 +36,13 @@ const STORAGE_KEYS = {
 };
 
 // Local storage helpers
+export function safeUUID(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return 'id_' + Math.random().toString(36).substring(2, 11) + '_' + Date.now();
+}
+
 function getLocalItem<T>(key: string, defaultValue: T): T {
   try {
     const raw = localStorage.getItem(key);
@@ -210,7 +217,7 @@ export async function recordAttempt(
   // Local calculation
   const attempts = getLocalItem<Attempt[]>(STORAGE_KEYS.ATTEMPTS, []);
   const newAttempt: Attempt = {
-    id: crypto.randomUUID(),
+    id: safeUUID(),
     user_id: userId,
     question_id: questionId,
     topic_id: topicId,
@@ -350,7 +357,7 @@ export async function saveGeneratedQuestions(
 ): Promise<Question[]> {
   const newQuestions: Question[] = questions.map((q) => ({
     ...q,
-    id: crypto.randomUUID(),
+    id: safeUUID(),
     created_at: new Date().toISOString(),
     content_hash: contentHash,
   }));
@@ -391,7 +398,7 @@ export function generateFallbackQuestionsFromText(text: string): Question[] {
     const words = keySentence.split(' ').slice(0, 6).join(' ');
 
     fallbackQuestions.push({
-      id: crypto.randomUUID(),
+      id: safeUUID(),
       topic_id: null,
       question: `Regarding "${words}...": What is the primary conceptual principle highlighted in your uploaded notes?`,
       options: [
@@ -441,7 +448,7 @@ export async function createBattleRoom(hostId: string, hostName: string): Promis
   const questionIds = selectedQuestions.map((q) => q.id);
 
   const room: BattleRoom = {
-    id: crypto.randomUUID(),
+    id: safeUUID(),
     code,
     host_id: hostId,
     status: 'waiting',
@@ -456,7 +463,7 @@ export async function createBattleRoom(hostId: string, hostName: string): Promis
 
   // Add host as first participant
   const participant: BattleParticipant = {
-    id: crypto.randomUUID(),
+    id: safeUUID(),
     room_id: room.id,
     user_id: hostId,
     name: hostName,
@@ -473,6 +480,41 @@ export async function createBattleRoom(hostId: string, hostName: string): Promis
   getBattleChannel(code).postMessage({ type: 'ROOM_UPDATED', room, participants: [participant] });
 
   return room;
+}
+
+export async function addBotToBattleRoom(code: string): Promise<BattleParticipant[]> {
+  const upperCode = code.toUpperCase();
+  const room = await getBattleRoom(upperCode);
+  if (!room) throw new Error('Room not found');
+
+  const botNames = ['Alex AI ⚡', 'Sophia AI 🎯', 'Neo Coder 🚀', 'DBMS Bot 🧠'];
+  const botName = botNames[Math.floor(Math.random() * botNames.length)];
+  const botId = 'bot_' + Math.random().toString(36).substring(2, 7);
+
+  const botParticipant: BattleParticipant = {
+    id: safeUUID(),
+    room_id: room.id,
+    user_id: botId,
+    name: botName,
+    score: 0,
+    answers: [],
+    joined_at: new Date().toISOString(),
+  };
+
+  const participants = await getBattleParticipants(upperCode);
+  const updated = [...participants.filter((p) => !p.user_id.startsWith('bot_')), botParticipant];
+
+  const allParticipants = getLocalItem<Record<string, BattleParticipant[]>>(STORAGE_KEYS.BATTLE_PARTICIPANTS, {});
+  allParticipants[upperCode] = updated;
+  setLocalItem(STORAGE_KEYS.BATTLE_PARTICIPANTS, allParticipants);
+
+  getBattleChannel(upperCode).postMessage({
+    type: 'ROOM_UPDATED',
+    room,
+    participants: updated,
+  });
+
+  return updated;
 }
 
 export async function getBattleRoom(code: string): Promise<BattleRoom | null> {
@@ -493,7 +535,7 @@ export async function joinBattleRoom(
   const upperCode = code.toUpperCase();
   const room = await getBattleRoom(upperCode);
   if (!room) {
-    throw new Error('Room not found. Please check the 5-letter code.');
+    throw new Error('Room not found. Please check the match code.');
   }
 
   const participants = await getBattleParticipants(upperCode);
@@ -506,7 +548,7 @@ export async function joinBattleRoom(
 
   if (!existing) {
     const newParticipant: BattleParticipant = {
-      id: crypto.randomUUID(),
+      id: safeUUID(),
       room_id: room.id,
       user_id: userId,
       name: userName,
@@ -530,11 +572,32 @@ export async function joinBattleRoom(
   return { room, participants: updatedParticipants };
 }
 
-export async function startBattle(code: string, hostId: string): Promise<BattleRoom> {
+export async function startBattle(code: string, hostId: string): Promise<{ room: BattleRoom; participants: BattleParticipant[] }> {
   const upperCode = code.toUpperCase();
   const room = await getBattleRoom(upperCode);
   if (!room) throw new Error('Room not found');
   if (room.host_id !== hostId) throw new Error('Only the host can start the battle');
+
+  let participants = await getBattleParticipants(upperCode);
+  if (participants.length < 2) {
+    // Automatically add AI rival so duel can start immediately
+    const botNames = ['Alex AI ⚡', 'Sophia AI 🎯', 'Neo Coder 🚀', 'DBMS Bot 🧠'];
+    const botName = botNames[Math.floor(Math.random() * botNames.length)];
+    const botId = 'bot_' + Math.random().toString(36).substring(2, 7);
+    const botParticipant: BattleParticipant = {
+      id: safeUUID(),
+      room_id: room.id,
+      user_id: botId,
+      name: botName,
+      score: 0,
+      answers: [],
+      joined_at: new Date().toISOString(),
+    };
+    participants = [...participants, botParticipant];
+    const allParticipants = getLocalItem<Record<string, BattleParticipant[]>>(STORAGE_KEYS.BATTLE_PARTICIPANTS, {});
+    allParticipants[upperCode] = participants;
+    setLocalItem(STORAGE_KEYS.BATTLE_PARTICIPANTS, allParticipants);
+  }
 
   const updatedRoom: BattleRoom = {
     ...room,
@@ -550,9 +613,10 @@ export async function startBattle(code: string, hostId: string): Promise<BattleR
   getBattleChannel(upperCode).postMessage({
     type: 'BATTLE_STARTED',
     room: updatedRoom,
+    participants,
   });
 
-  return updatedRoom;
+  return { room: updatedRoom, participants };
 }
 
 // Server-side scoring logic (run locally or via Supabase RPC)
