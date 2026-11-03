@@ -169,3 +169,4 @@ C) ORDER BY
 D) FILTER
 Answer: B
 Explanation: HAVING filters groups after aggregation, whereas WHERE filters individual rows before aggregation.`;
+

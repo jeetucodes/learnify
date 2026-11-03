@@ -4,8 +4,9 @@ import {
   Plus,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { getTopicMastery } from '../lib/storage';
+import { getTopicMastery, getUserAttempts } from '../lib/storage';
 import { Heatmap } from '../components/Heatmap';
+import { DashboardAnalytics } from '../components/DashboardAnalytics';
 import {
   SugaryFlame,
   SugaryBolt,
@@ -18,7 +19,7 @@ import {
   SugaryCalendar,
   SugaryStar,
 } from '../components/SugaryIcons';
-import type { TopicMastery } from '../types/database';
+import type { TopicMastery, Attempt } from '../types/database';
 
 interface HomeScreenProps {
   onNavigate: (route: string, params?: any) => void;
@@ -27,12 +28,14 @@ interface HomeScreenProps {
 export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
   const { user } = useAuth();
   const [masteryList, setMasteryList] = useState<TopicMastery[]>([]);
+  const [attempts, setAttempts] = useState<Attempt[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (user?.id) {
-      getTopicMastery(user.id).then((res) => {
+      Promise.all([getTopicMastery(user.id), getUserAttempts(user.id)]).then(([res, atts]) => {
         setMasteryList(res);
+        setAttempts(atts);
         setLoading(false);
       });
     } else {
@@ -189,6 +192,16 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
         </div>
 
       </div>
+
+      {/* 2.5. Interactive Graphs & Analytics Presentation */}
+      <DashboardAnalytics
+        masteryList={masteryList}
+        attempts={attempts}
+        userXp={user?.xp || 0}
+        userStreak={user?.streak || 0}
+        onSelectTopic={(topicId) => onNavigate('practice', { topicId })}
+        onNavigate={onNavigate}
+      />
 
       {/* 3. Quick Action Portals with 3D Sugary Icons */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
