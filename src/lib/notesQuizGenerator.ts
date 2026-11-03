@@ -4,6 +4,7 @@ import type { Question } from '../types/database';
 export interface GenerateQuizParams {
   text: string;
   topicId?: string | null;
+  topicTitle?: string | null;
   count?: number;
   difficulty?: 'easy' | 'medium' | 'hard';
 }
@@ -16,14 +17,14 @@ export interface GenerateQuizParams {
 export async function generateQuestionsFromNotes(
   params: GenerateQuizParams
 ): Promise<Question[]> {
-  const { text, topicId, count = 10, difficulty = 'medium' } = params;
+  const { text, topicId, topicTitle, count = 10, difficulty = 'medium' } = params;
   const targetCount = Math.min(30, Math.max(3, count));
 
   // 1. Attempt client-side Gemini call if VITE_GEMINI_API_KEY is configured
   const clientGeminiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY;
   if (clientGeminiKey && clientGeminiKey !== 'your-gemini-api-key') {
     try {
-      const questionsFromGemini = await callGeminiDirectly(text, clientGeminiKey, targetCount, difficulty, topicId);
+      const questionsFromGemini = await callGeminiDirectly(text, clientGeminiKey, targetCount, difficulty, topicId, topicTitle);
       if (questionsFromGemini && questionsFromGemini.length > 0) {
         return questionsFromGemini;
       }
@@ -36,7 +37,7 @@ export async function generateQuestionsFromNotes(
   const clientXaiKey = (import.meta as any).env?.VITE_XAI_API_KEY;
   if (clientXaiKey && clientXaiKey !== 'your-xai-api-key') {
     try {
-      const questionsFromGrok = await callGrokDirectly(text, clientXaiKey, targetCount, difficulty, topicId);
+      const questionsFromGrok = await callGrokDirectly(text, clientXaiKey, targetCount, difficulty, topicId, topicTitle);
       if (questionsFromGrok && questionsFromGrok.length > 0) {
         return questionsFromGrok;
       }
@@ -57,12 +58,13 @@ async function callGeminiDirectly(
   apiKey: string,
   count: number,
   difficulty: string,
-  topicId?: string | null
+  topicId?: string | null,
+  topicTitle?: string | null
 ): Promise<Question[] | null> {
   const model = (import.meta as any).env?.VITE_GEMINI_MODEL || 'gemini-3.5-flash';
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-  const prompt = `You are an elite university professor and exam creator in Computer Science & Databases. Analyze the following study notes and generate exactly ${count} university-grade multiple-choice questions.
+  const prompt = `You are an elite university professor and exam creator${topicTitle ? ` specializing in "${topicTitle}"` : ''}. Analyze the following study notes and generate exactly ${count} university-grade multiple-choice questions focusing on ${topicTitle || 'the primary concepts in the document'}.
 
 Target Difficulty: ${difficulty}.
 - If "easy": Focus on core terminology, essential database principles, standard relational algebra/SQL syntax, and fundamental definitions.
@@ -146,12 +148,13 @@ async function callGrokDirectly(
   apiKey: string,
   count: number,
   difficulty: string,
-  topicId?: string | null
+  topicId?: string | null,
+  topicTitle?: string | null
 ): Promise<Question[] | null> {
   const model = (import.meta as any).env?.VITE_XAI_MODEL || 'grok-2-latest';
   const endpoint = 'https://api.x.ai/v1/chat/completions';
 
-  const systemPrompt = `You are an elite university computer science professor. Analyze the provided study notes and generate exactly ${count} university-grade multiple choice questions.
+  const systemPrompt = `You are an elite university professor${topicTitle ? ` in "${topicTitle}"` : ''}. Analyze the provided study notes and generate exactly ${count} university-grade multiple choice questions focusing on ${topicTitle || 'the primary concepts in the document'}.
 Difficulty: ${difficulty}.
 CRITICAL QUALITY STANDARDS:
 1. Scenario & Concept Grounded: Write analytical, thought-provoking questions.

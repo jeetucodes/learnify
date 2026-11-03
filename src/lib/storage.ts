@@ -33,6 +33,7 @@ const STORAGE_KEYS = {
   BATTLE_ROOMS: 'learnify_battle_rooms',
   BATTLE_PARTICIPANTS: 'learnify_battle_participants',
   CACHE_NOTES: 'learnify_notes_cache',
+  CUSTOM_TOPICS: 'learnify_custom_topics',
 };
 
 // Local storage helpers
@@ -146,15 +147,36 @@ export async function getTopics(unitId: string): Promise<Topic[]> {
 }
 
 export async function getAllTopics(): Promise<Topic[]> {
+  const customTopics = getLocalItem<Topic[]>(STORAGE_KEYS.CUSTOM_TOPICS, []);
   if (isSupabaseConfigured()) {
     try {
       const { data, error } = await supabase.from('topics').select('*').order('order_index');
-      if (!error && data && data.length > 0) return data as Topic[];
+      if (!error && data && data.length > 0) {
+        return [...customTopics, ...(data as Topic[])];
+      }
     } catch (e) {
       console.warn('Supabase getAllTopics fallback to local:', e);
     }
   }
-  return SEED_TOPICS;
+  return [...customTopics, ...SEED_TOPICS];
+}
+
+export async function saveCustomTopic(topic: Topic): Promise<Topic> {
+  const customTopics = getLocalItem<Topic[]>(STORAGE_KEYS.CUSTOM_TOPICS, []);
+  const exists = customTopics.some((t) => t.id === topic.id);
+  const updated = exists
+    ? customTopics.map((t) => (t.id === topic.id ? topic : t))
+    : [topic, ...customTopics];
+  setLocalItem(STORAGE_KEYS.CUSTOM_TOPICS, updated);
+
+  if (isSupabaseConfigured()) {
+    try {
+      await supabase.from('topics').insert(topic);
+    } catch (e) {
+      console.warn('Supabase saveCustomTopic fallback to local:', e);
+    }
+  }
+  return topic;
 }
 
 export async function getQuestionsByTopic(topicId: string): Promise<Question[]> {

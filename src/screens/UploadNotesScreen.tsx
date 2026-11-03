@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   FileText,
   Play,
@@ -7,15 +7,21 @@ import {
   RotateCcw,
   Lock,
 } from 'lucide-react';
-import { extractTextFromPdf } from '../lib/pdfExtractor';
+import { extractTextFromPdf, type PdfExtractionResult } from '../lib/pdfExtractor';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import {
-  getAllTopics,
+  safeUUID,
   flagQuestion,
   saveGeneratedQuestions,
+  saveCustomTopic,
 } from '../lib/storage';
 import { generateQuestionsFromNotes } from '../lib/notesQuizGenerator';
+import {
+  detectTopicsFromPdfText,
+  cleanFileNameToTitle,
+  type PdfTopicAnalysis,
+} from '../lib/pdfTopicDetector';
 import {
   SugarySparkles,
   SugaryAlert,
@@ -32,9 +38,15 @@ export const UploadNotesScreen: React.FC<UploadNotesScreenProps> = ({ onStartQui
   const { user } = useAuth();
   const [file, setFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [topics, setTopics] = useState<Topic[]>([]);
-  const [selectedTopicId, setSelectedTopicId] = useState<string>('');
-  const [customTopicName, setCustomTopicName] = useState<string>('');
+  
+  // Topic state created directly from PDF
+  const [extractedPdfData, setExtractedPdfData] = useState<PdfExtractionResult | null>(null);
+  const [analyzingTopics, setAnalyzingTopics] = useState(false);
+  const [pdfAnalysis, setPdfAnalysis] = useState<PdfTopicAnalysis | null>(null);
+  const [pdfMainTopic, setPdfMainTopic] = useState<string>('');
+  const [selectedPdfTopic, setSelectedPdfTopic] = useState<string>('all');
+  const [customSubtopic, setCustomSubtopic] = useState<string>('');
+
   const [questionCount, setQuestionCount] = useState<number>(10);
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [autoStart, setAutoStart] = useState<boolean>(true);
@@ -47,14 +59,7 @@ export const UploadNotesScreen: React.FC<UploadNotesScreenProps> = ({ onStartQui
   const [currentStep, setCurrentStep] = useState<number>(0); // 1: Extract, 2: Generate, 3: Save
   const [generatedQuestions, setGeneratedQuestions] = useState<Question[]>([]);
 
-  useEffect(() => {
-    getAllTopics().then((res) => {
-      setTopics(res);
-      if (res.length > 0) setSelectedTopicId(res[0].id);
-    });
-  }, []);
-
-  const handleSelectFile = (selected: File) => {
+  const handleSelectFile = async (selected: File) => {
     if (selected.type !== 'application/pdf' && !selected.name.endsWith('.pdf')) {
       setStatus('error');
       setStatusMessage('Error: Only PDF documents are supported.');
@@ -71,6 +76,30 @@ export const UploadNotesScreen: React.FC<UploadNotesScreenProps> = ({ onStartQui
     setStatus('idle');
     setStatusMessage('');
     setGeneratedQuestions([]);
+
+    // Fallback title from clean filename
+    const initialTitle = cleanFileNameToTitle(selected.name);
+    setPdfMainTopic(initialTitle);
+    setSelectedPdfTopic('all');
+    setCustomSubtopic('');
+    setAnalyzingTopics(true);
+
+    try {
+      const extraction = await extractTextFromPdf(selected);
+      setExtractedPdfData(extraction);
+
+      if (!extraction.isScanned && extraction.text && extraction.text.length > 50) {
+        const analysis = await detectTopicsFromPdfText(extraction.text, selected.name);
+        setPdfAnalysis(analysis);
+        if (analysis.mainTopic) {
+          setPdfMainTopic(analysis.mainTopic);
+        }
+      }
+    } catch (err) {
+      console.warn('PDF topic detection note:', err);
+    } finally {
+      setAnalyzingTopics(false);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -87,110 +116,138 @@ export const UploadNotesScreen: React.FC<UploadNotesScreenProps> = ({ onStartQui
     }
   };
 
+  const computeFinalTopicTitle = (): string => {
+    const baseTopic = pdfMainTopic.trim() || (file ? cleanFileNameToTitle(file.name) : 'Notes to Quiz');
+    if (selectedPdfTopic === 'custom' && customSubtopic.trim()) {
+      return `${baseTopic}: ${customSubtopic.trim()}`;
+    }
+    if (selectedPdfTopic !== 'all' && pdfAnalysis) {
+      const match = pdfAnalysis.detectedTopics.find((t) => t.id === selectedPdfTopic);
+      if (match) {
+        return `${baseTopic} - ${match.title}`;
+      }
+    }
+    return baseTopic;
+  };
+
   const handleProcessPdf = async () => {
     if (!file) return;
 
-    setStatus('extracting');
-    setCurrentStep(1);
-    setStatusMessage('Extracting text from PDF in browser...');
+    let extraction = extractedPdfData;
+    if (!extraction || !extraction.text) {
+      setStatus('extracting');
+      setCurrentStep(1);
+      setStatusMessage('Extracting text from PDF in browser...');
 
-    try {
-      // 1. Browser text extraction with page progress
-      const extraction = await extractTextFromPdf(file, (curr, total) => {
-        setStatusMessage(`Extracting page ${curr} of ${total}...`);
-      });
-
-      if (extraction.isScanned || !extraction.text || extraction.text.length < 50) {
+      try {
+        extraction = await extractTextFromPdf(file, (curr, total) => {
+          setStatusMessage(`Extracting page ${curr} of ${total}...`);
+        });
+        setExtractedPdfData(extraction);
+      } catch (err: any) {
         setStatus('error');
-        setStatusMessage('This PDF looks scanned. Upload a text-based PDF.');
+        setStatusMessage(err?.message || 'Failed to extract text from PDF.');
         return;
       }
+    }
 
-      // 2. Optional upload original PDF to Supabase Storage
-      if (isSupabaseConfigured() && user) {
-        try {
-          setStatus('uploading');
-          setStatusMessage('Backing up PDF to your secure notes vault...');
-          const storagePath = `${user.id}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
-          const { error: uploadErr } = await supabase.storage.from('notes').upload(storagePath, file);
-          if (!uploadErr) {
-            await supabase.from('notes').insert({
-              user_id: user.id,
-              title: file.name,
-              storage_path: storagePath,
-            });
-          }
-        } catch (storageErr) {
-          console.warn('Supabase storage upload notice:', storageErr);
-        }
-      }
-
-      // 3. Question Generation via Edge Function
-      setStatus('generating');
-      setCurrentStep(2);
-      setStatusMessage(`Synthesizing ${questionCount} conceptual MCQs via Edge AI...`);
-
-      const chosenChunk = extraction.chunks[0] || extraction.text.slice(0, 15000);
-      const effectiveTopicId = selectedTopicId === 'custom' ? null : selectedTopicId;
-
-      let questionsRaw: Question[] = [];
-
-      // Try Edge Function if configured
-      let edgeSucceeded = false;
-      if (isSupabaseConfigured()) {
-        try {
-          const { data, error } = await supabase.functions.invoke('generate-questions', {
-            body: {
-              text: chosenChunk,
-              topicId: effectiveTopicId,
-              count: questionCount,
-              difficulty,
-            },
-          });
-
-          if (!error && data?.questions && Array.isArray(data.questions) && data.questions.length > 0) {
-            questionsRaw = data.questions;
-            edgeSucceeded = true;
-          }
-        } catch (edgeErr) {
-          console.warn('Supabase Edge Function notice, using intelligent notes synthesizer fallback:', edgeErr);
-        }
-      }
-
-      // If Edge Function not deployed or unreachable, run intelligent notes-to-quiz synthesizer
-      if (!edgeSucceeded || questionsRaw.length === 0) {
-        setStatusMessage(`Analyzing document structure and synthesizing ${questionCount} MCQs from notes...`);
-        questionsRaw = await generateQuestionsFromNotes({
-          text: chosenChunk,
-          topicId: effectiveTopicId,
-          count: questionCount,
-          difficulty,
-        });
-      }
-
-      // 4. Save to local storage for instant availability
-      setStatus('saving');
-      setCurrentStep(3);
-      setStatusMessage('Finalizing and saving questions...');
-
-      await saveGeneratedQuestions(questionsRaw);
-
-      setGeneratedQuestions(questionsRaw);
-      setStatus('ready');
-      setStatusMessage(`Successfully generated ${questionsRaw.length} syllabus MCQs!`);
-
-      if (autoStart) {
-        const topicTitle =
-          selectedTopicId === 'custom'
-            ? customTopicName.trim() || 'Custom Notes Topic'
-            : topics.find((t) => t.id === selectedTopicId)?.title || 'Notes to Quiz';
-
-        onStartQuiz(selectedTopicId || 'notes-quiz', topicTitle, questionsRaw);
-      }
-    } catch (err: any) {
-      console.error('Quiz generation error:', err);
+    if (extraction.isScanned || !extraction.text || extraction.text.length < 50) {
       setStatus('error');
-      setStatusMessage(err?.message || 'Failed to process notes PDF.');
+      setStatusMessage('This PDF looks scanned or contains no extractable text. Upload a text-based PDF.');
+      return;
+    }
+
+    // Determine the exact topic created from this PDF
+    const finalTopicTitle = computeFinalTopicTitle();
+
+    // Create and save this new Topic into storage/database
+    const createdTopic: Topic = {
+      id: safeUUID(),
+      unit_id: 'unit-pdf-notes',
+      title: finalTopicTitle,
+      order_index: 0,
+    };
+    await saveCustomTopic(createdTopic);
+
+    // Optional upload original PDF to Supabase Storage
+    if (isSupabaseConfigured() && user) {
+      try {
+        setStatus('uploading');
+        setStatusMessage('Backing up PDF to your secure notes vault...');
+        const storagePath = `${user.id}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+        const { error: uploadErr } = await supabase.storage.from('notes').upload(storagePath, file);
+        if (!uploadErr) {
+          await supabase.from('notes').insert({
+            user_id: user.id,
+            title: file.name,
+            storage_path: storagePath,
+          });
+        }
+      } catch (storageErr) {
+        console.warn('Supabase storage upload notice:', storageErr);
+      }
+    }
+
+    // Question Generation
+    setStatus('generating');
+    setCurrentStep(2);
+    setStatusMessage(`Synthesizing ${questionCount} conceptual MCQs for "${finalTopicTitle}"...`);
+
+    const chosenChunk = extraction.chunks[0] || extraction.text.slice(0, 15000);
+    let questionsRaw: Question[] = [];
+
+    // Try Edge Function if configured
+    let edgeSucceeded = false;
+    if (isSupabaseConfigured()) {
+      try {
+        const { data, error } = await supabase.functions.invoke('generate-questions', {
+          body: {
+            text: chosenChunk,
+            topicId: createdTopic.id,
+            count: questionCount,
+            difficulty,
+          },
+        });
+
+        if (!error && data?.questions && Array.isArray(data.questions) && data.questions.length > 0) {
+          questionsRaw = data.questions;
+          edgeSucceeded = true;
+        }
+      } catch (edgeErr) {
+        console.warn('Supabase Edge Function notice, using intelligent notes synthesizer fallback:', edgeErr);
+      }
+    }
+
+    // Intelligent synthesizer with Gemini 3.5 Flash & Grok
+    if (!edgeSucceeded || questionsRaw.length === 0) {
+      setStatusMessage(`Analyzing notes and synthesizing ${questionCount} ${difficulty.toUpperCase()} questions...`);
+      questionsRaw = await generateQuestionsFromNotes({
+        text: chosenChunk,
+        topicId: createdTopic.id,
+        topicTitle: finalTopicTitle,
+        count: questionCount,
+        difficulty,
+      });
+    }
+
+    // Assign topic_id to each question
+    const finalQuestions = questionsRaw.map((q) => ({
+      ...q,
+      topic_id: createdTopic.id,
+    }));
+
+    // Save to local storage for instant availability
+    setStatus('saving');
+    setCurrentStep(3);
+    setStatusMessage('Finalizing and saving questions...');
+    await saveGeneratedQuestions(finalQuestions);
+
+    setGeneratedQuestions(finalQuestions);
+    setStatus('ready');
+    setStatusMessage(`Successfully generated ${finalQuestions.length} MCQs on "${finalTopicTitle}"!`);
+
+    if (autoStart) {
+      onStartQuiz(createdTopic.id, createdTopic.title, finalQuestions);
     }
   };
 
@@ -209,12 +266,9 @@ export const UploadNotesScreen: React.FC<UploadNotesScreenProps> = ({ onStartQui
 
   const handleStart = () => {
     if (generatedQuestions.length === 0) return;
-    const topicTitle =
-      selectedTopicId === 'custom'
-        ? customTopicName.trim() || 'Custom Notes Topic'
-        : topics.find((t) => t.id === selectedTopicId)?.title || 'Notes to Quiz';
-
-    onStartQuiz(selectedTopicId || 'notes-quiz', topicTitle, generatedQuestions);
+    const finalTopicTitle = computeFinalTopicTitle();
+    const topicId = generatedQuestions[0]?.topic_id || 'notes-quiz';
+    onStartQuiz(topicId, finalTopicTitle, generatedQuestions);
   };
 
   return (
@@ -294,43 +348,90 @@ export const UploadNotesScreen: React.FC<UploadNotesScreenProps> = ({ onStartQui
 
               <button
                 type="button"
-                onClick={() => { setFile(null); setGeneratedQuestions([]); setStatus('idle'); }}
+                onClick={() => {
+                  setFile(null);
+                  setExtractedPdfData(null);
+                  setPdfAnalysis(null);
+                  setPdfMainTopic('');
+                  setSelectedPdfTopic('all');
+                  setCustomSubtopic('');
+                  setGeneratedQuestions([]);
+                  setStatus('idle');
+                }}
                 className="text-xs font-bold text-slate-500 hover:text-rose-600 px-3 py-1.5 rounded-full hover:bg-rose-50 transition-colors cursor-pointer"
               >
                 Change File
               </button>
             </div>
 
-            {/* Syllabus Topic & Parameters Selection */}
+            {/* Topic & Parameters Selection (Auto-Created From PDF) */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
               
-              {/* 1. Target Topic Selector */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Target Topic
-                </label>
-                <select
-                  value={selectedTopicId}
-                  onChange={(e) => setSelectedTopicId(e.target.value)}
-                  className="w-full text-xs font-semibold p-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 focus:outline-none focus:border-indigo-500 shadow-xs"
-                >
-                  {topics.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.title}
-                    </option>
-                  ))}
-                  <option value="custom">+ Create New Custom Topic</option>
-                </select>
+              {/* 1. Target Topic Created From PDF */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Target Topic (From PDF)
+                  </label>
+                  {analyzingTopics && (
+                    <span className="text-[11px] font-bold text-indigo-600 animate-pulse flex items-center gap-1">
+                      <div className="w-2.5 h-2.5 rounded-full border-2 border-indigo-600 border-t-transparent animate-spin" />
+                      Scanning topics...
+                    </span>
+                  )}
+                </div>
 
-                {selectedTopicId === 'custom' && (
+                {/* Primary Topic detected from PDF (Editable) */}
+                <div className="relative">
                   <input
                     type="text"
-                    value={customTopicName}
-                    onChange={(e) => setCustomTopicName(e.target.value)}
-                    placeholder="Enter custom topic name..."
-                    className="mt-2 w-full text-xs p-2 rounded-lg border border-slate-200 text-slate-900 focus:outline-none"
+                    value={pdfMainTopic}
+                    onChange={(e) => setPdfMainTopic(e.target.value)}
+                    placeholder="Topic name extracted from PDF..."
+                    className="w-full text-xs font-bold p-2.5 pr-20 rounded-xl border border-indigo-200 bg-indigo-50/50 text-slate-900 focus:outline-none focus:border-indigo-500 focus:bg-white shadow-xs transition-colors"
                   />
+                  <span className="absolute right-2 top-2 text-[10px] font-bold uppercase tracking-wider text-indigo-700 bg-white px-2 py-0.5 rounded-md border border-indigo-200 shadow-xs pointer-events-none">
+                    PDF Topic
+                  </span>
+                </div>
+
+                {/* Subtopic Focus Selector extracted from PDF */}
+                {pdfAnalysis && pdfAnalysis.detectedTopics.length > 0 && (
+                  <div className="space-y-1">
+                    <label className="block text-[11px] font-bold text-slate-500">
+                      Focus Area inside PDF:
+                    </label>
+                    <select
+                      value={selectedPdfTopic}
+                      onChange={(e) => setSelectedPdfTopic(e.target.value)}
+                      className="w-full text-xs font-semibold p-2 rounded-xl border border-slate-200 bg-white text-slate-900 focus:outline-none focus:border-indigo-500 shadow-xs"
+                    >
+                      <option value="all">🌟 Entire PDF (All Topics Combined)</option>
+                      {pdfAnalysis.detectedTopics.map((st) => (
+                        <option key={st.id} value={st.id}>
+                          📑 {st.title}
+                        </option>
+                      ))}
+                      <option value="custom">✏️ Custom Subtopic Focus...</option>
+                    </select>
+
+                    {selectedPdfTopic === 'custom' && (
+                      <input
+                        type="text"
+                        value={customSubtopic}
+                        onChange={(e) => setCustomSubtopic(e.target.value)}
+                        placeholder="Enter specific topic/concept from PDF..."
+                        className="mt-1.5 w-full text-xs p-2 rounded-lg border border-slate-200 text-slate-900 focus:outline-none focus:border-indigo-500"
+                      />
+                    )}
+                  </div>
                 )}
+
+                <span className="block text-[11px] text-slate-500 font-medium">
+                  {pdfAnalysis && pdfAnalysis.detectedTopics.length > 0
+                    ? `Found ${pdfAnalysis.detectedTopics.length} core concepts in this PDF`
+                    : 'Auto-detected directly from your PDF notes'}
+                </span>
               </div>
 
               {/* 2. Number of Questions (5, 10, 15, 20) */}
