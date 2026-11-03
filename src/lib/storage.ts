@@ -453,7 +453,6 @@ export function getBattleSupabaseChannel(roomCode: string) {
     const ch = supabase.channel(`battle_${code}`, {
       config: { broadcast: { self: true } },
     });
-    ch.subscribe();
     battleSupabaseChannels.set(code, ch);
   }
   return battleSupabaseChannels.get(code);
@@ -505,7 +504,7 @@ export async function discoverBattleRoomRemote(
         resolved = true;
         resolve(null);
       }
-    }, 2800);
+    }, 3500);
 
     const onRoomState = (payload: any) => {
       if (!resolved && payload?.payload?.room) {
@@ -518,6 +517,7 @@ export async function discoverBattleRoomRemote(
       }
     };
 
+    // Attach .on() BEFORE subscribe!
     ch.on('broadcast', { event: 'ROOM_STATE' }, onRoomState);
 
     const sendRequest = () => {
@@ -528,15 +528,17 @@ export async function discoverBattleRoomRemote(
       }).catch(() => {});
     };
 
-    if (ch.state === 'joined') {
-      sendRequest();
-    } else {
-      ch.subscribe((status: string) => {
-        if (status === 'SUBSCRIBED') {
-          sendRequest();
-        }
-      });
-    }
+    ch.subscribe((status: string) => {
+      if (status === 'SUBSCRIBED') {
+        sendRequest();
+        setTimeout(() => {
+          if (!resolved) sendRequest();
+        }, 800);
+      }
+    });
+
+    // Also trigger immediately in case already in subscribed state
+    sendRequest();
   });
 }
 
@@ -1099,6 +1101,7 @@ export function subscribeToBattle(
     ch.on('broadcast', { event: 'ROOM_UPDATED' }, handleRoomUpdated);
     ch.on('broadcast', { event: 'PLAYERS_UPDATED' }, handlePlayersUpdated);
     ch.on('broadcast', { event: 'SCORE_UPDATED' }, handleScoreUpdated);
+    ch.subscribe();
   }
 
   return () => {

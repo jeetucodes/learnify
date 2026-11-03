@@ -166,3 +166,4 @@ Answer the student's doubt directly, concisely, and clearly with examples.`;
     return 'Doubt clarification failed: ' + (err?.message || 'Unknown error');
   }
 }
+
